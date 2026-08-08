@@ -1,0 +1,16 @@
+# This package has no runtime dependencies and needs no install step. If
+# node_modules exists here at all, something went wrong; it is ignored so that
+# nobody accidentally commits it.
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Artifacts belong in the repository — the demonstration run is committed on
+# purpose so a reader can re-run it and get the same bytes. Nothing under
+# artifacts/ or exclusions/ is ignored.

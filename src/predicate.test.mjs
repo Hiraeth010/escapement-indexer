@@ -331,11 +331,14 @@ test('the exclusion set is reproducible from chain state alone, by a stranger', 
     assert.equal(p.hash, art.params.predicate_hash, `${f}: the declaration in the artifact must hash to the recorded value`);
     assert.equal(policyBinding(art.params.exclusions_hash, p.hash), art.params.policy_binding, `${f}: policy binding`);
 
-    // Every address the artifact mentions, from both sides of the decision.
+    // Every address that accrued anything, from both sides of the decision.
+    // (`closing_state` is deliberately NOT included: an address holding a zero
+    // balance never accrues, so it appears in neither the ledger nor the
+    // excluded list, and a predicate verdict for it would be a statement about
+    // an address the distribution never considered.)
     const addresses = [
       ...art.ledger.map((r) => r.owner),
       ...art.predicate.excluded.map((e) => e.owner),
-      ...art.closing_state.map((a) => a.owner),
     ];
     const derived = new Set();
     for (const a of addresses) if (p.evaluate(a).verdict === UNCLAIMABLE) derived.add(a);

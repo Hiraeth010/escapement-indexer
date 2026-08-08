@@ -1,13 +1,33 @@
 escapement verify
-  root 795643f063b5b6c7e0d185fe1ea405a2762d6309f4e86430d9d3ed2b72fad991
+  root f2a915906003a2822050077c6a7cdb994009265a8959f383ffd4ca48c61d2787
   mint F1XdReoHL3GweeCG4sgoZGAdsUNt8sda8n5EE2TNpump
   range [437990500, 437990520)
   rpc solana-rpc.publicnode.com   <- use a DIFFERENT provider than the publisher, or this proves less
+  fetched 1/20 blocks
+  fetched 2/20 blocks
+  fetched 3/20 blocks
+  fetched 4/20 blocks
+  fetched 5/20 blocks
+  fetched 6/20 blocks
+  fetched 7/20 blocks
+  fetched 8/20 blocks
+  fetched 9/20 blocks
+  fetched 10/20 blocks
+  fetched 11/20 blocks
+  fetched 12/20 blocks
+  fetched 13/20 blocks
+  fetched 14/20 blocks
+  fetched 15/20 blocks
+  fetched 16/20 blocks
+  fetched 17/20 blocks
+  fetched 18/20 blocks
+  fetched 19/20 blocks
+  fetched 20/20 blocks
 
 AGREE
 
   [agree] merkle_root
-    root matches: 795643f063b5b6c7e0d185fe1ea405a2762d6309f4e86430d9d3ed2b72fad991
+    root matches: f2a915906003a2822050077c6a7cdb994009265a8959f383ffd4ca48c61d2787
 
   Verification shares the fetch, decode and accrual code with the producer.
   A bug in that shared code passes this check. See README, "What verification actually proves".
