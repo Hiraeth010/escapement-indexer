@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * extract.mjs — a block in, mint-relevant facts out. Pure; no I/O.
  *

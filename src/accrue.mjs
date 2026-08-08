@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * accrue.mjs — token-slots held, integrated over a half-open slot range.
  *

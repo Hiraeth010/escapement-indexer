@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * base58.mjs — base58 encode/decode, no dependencies.
  *

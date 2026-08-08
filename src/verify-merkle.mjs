@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * verify-merkle.mjs — a second, deliberately unrelated implementation of the
  * tree in `merkle.mjs`.
@@ -30,10 +31,44 @@ function key32(s) {
   return d;
 }
 
-function leafBytes(config, claimant, cumulative) {
+/**
+ * The v2 leaf domain, derived here a second time.
+ *
+ * `merkle.mjs` builds this with the project's `sha256` helper and its base58
+ * encoder; this builds it with `createHash` and a hand-rolled digit loop. If the
+ * two ever disagree, `verify` refuses to report on the publisher at all — which
+ * is the point of having a second implementation of the layer that turns policy
+ * into a commitment, not only of the layer that turns leaves into a root.
+ */
+export function independentDomain(configPubkey, policyBindingHex) {
+  if (!/^[0-9a-f]{64}$/.test(policyBindingHex ?? '')) {
+    throw new Error('verify-merkle: policy binding must be 64 lowercase hex characters');
+  }
+  const tag = Buffer.from('escapement.merkle/v2:domain', 'utf8');
+  const cfg = Buffer.from(key32(configPubkey));
+  const bind = Buffer.from(policyBindingHex, 'hex');
+  const digest = createHash('sha256').update(Buffer.concat([tag, cfg, bind])).digest();
+
+  // base58, written out rather than imported, for the same reason as the rest.
+  const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  let n = 0n;
+  for (const byte of digest) n = (n << 8n) | BigInt(byte);
+  let s = '';
+  while (n > 0n) {
+    s = ALPHABET[Number(n % 58n)] + s;
+    n /= 58n;
+  }
+  for (const byte of digest) {
+    if (byte !== 0) break;
+    s = '1' + s;
+  }
+  return s;
+}
+
+function leafBytes(domain, claimant, cumulative) {
   const out = new Uint8Array(1 + 32 + 32 + 8);
   out[0] = 0x00;
-  out.set(key32(config), 1);
+  out.set(key32(domain), 1);
   out.set(key32(claimant), 33);
   let v = BigInt(cumulative);
   if (v < 0n || v > (1n << 64n) - 1n) throw new Error('verify-merkle: cumulative out of u64 range');
@@ -59,11 +94,11 @@ function pair(a, b) {
 const EMPTY = Buffer.from(sha(Buffer.from('escapement.merkle/v1:empty', 'utf8'))).toString('hex');
 
 /**
- * @param {string} config base58
+ * @param {string} domain base58 32 bytes — see `independentDomain`
  * @param {{claimant: string, cumulative: bigint|string}[]} entries
  * @returns {string} root, lowercase hex
  */
-export function independentRoot(config, entries) {
+export function independentRoot(domain, entries) {
   if (entries.length === 0) return EMPTY;
 
   const withBytes = entries.map((e) => ({ k: key32(e.claimant), e }));
@@ -77,7 +112,7 @@ export function independentRoot(config, entries) {
     if (same) throw new Error('verify-merkle: duplicate claimant');
   }
 
-  let level = withBytes.map(({ e }) => sha(leafBytes(config, e.claimant, e.cumulative)));
+  let level = withBytes.map(({ e }) => sha(leafBytes(domain, e.claimant, e.cumulative)));
   while (level.length > 1) {
     const next = [];
     let i = 0;

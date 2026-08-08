@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * version.mjs — pin the environment (D12), and separate what may vary from what
  * may not.

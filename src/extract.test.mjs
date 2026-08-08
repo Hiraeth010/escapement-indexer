@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * extract.test.mjs — decoding a block into facts, including the cases where the
  * only correct behaviour is to refuse.

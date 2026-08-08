@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * run.mjs — the pipeline. Fetch, extract, accrue, exclude, distribute, commit.
  *
@@ -11,7 +12,9 @@ import { fetchRange } from './blocks.mjs';
 import { extractBlock } from './extract.mjs';
 import { accrue, ledgerFrom } from './accrue.mjs';
 import { distribute } from './entitle.mjs';
-import { buildTree } from './merkle.mjs';
+import { buildTree, commitmentDomain } from './merkle.mjs';
+import { PREDICATE_BUCKET, UNDECIDED_BUCKET } from './exclusions.mjs';
+import { RULES } from './predicate.mjs';
 import { LineHasher, hashValue, canonicalJson, sha256Hex } from './canonical.mjs';
 import { environment, SCHEMA_VERSION } from './version.mjs';
 import { comparePubkeys } from './base58.mjs';
@@ -139,28 +142,74 @@ export async function runIndex({
     classify: exclusions.classify,
   });
 
+  // ---------------------------------------------------------------------
+  // UNDECIDED HALTS THE RUN
+  //
+  // The predicate has three verdicts, not two. An address it cannot decide —
+  // because the operator marked it contentious, or because the owner field is
+  // not a well-formed address — is not quietly paid and not quietly dropped.
+  // The run stops and names every such address at once, so the operator
+  // resolves the whole set in one pass rather than one abort at a time.
+  //
+  // The failure mode this prevents is the reason it is an abort and not a
+  // warning: an unanswered question that resolves itself into whichever default
+  // is cheaper for the publisher is not an unanswered question, it is an answer
+  // nobody wrote down.
+  // ---------------------------------------------------------------------
+  const undecided = [...acc.excluded.entries()].filter(([bucket]) => bucket.startsWith(UNDECIDED_BUCKET));
+  if (undecided.length) {
+    const lines = undecided
+      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+      .map(([bucket, tokenSlots]) => {
+        const owner = bucket.slice(bucket.indexOf(':') + 1);
+        const v = exclusions.verdictFor(owner);
+        return `  ${owner}  ${tokenSlots} token-slots  (${v.rule}: ${v.reason})`;
+      });
+    throw new Error(
+      `the exclusion predicate returned UNDECIDED for ${undecided.length} address(es), so no artifact was ` +
+      `produced:\n${lines.join('\n')}\n\n` +
+      'Resolve each one in the exclusion document and re-run. Either give it a ' +
+      '`predicate.overrides` entry with verdict "claimable" (it can claim; pay it) or an `entries` entry ' +
+      '(it is a policy exclusion; do not pay it). There is deliberately no way to make this warning-only: ' +
+      'an undecided address must never be resolved by whichever default happens to be cheaper.',
+    );
+  }
+
   const ledger = ledgerFrom(acc.included);
 
   const excludedRows = [...acc.excluded.entries()]
     .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
     .map(([bucket, tokenSlots]) => ({ bucket, token_slots: tokenSlots }));
 
+  // Reported apart, always: how much of this distribution was moved by human
+  // judgement, and how much by a rule anybody can recompute.
+  const predicateRows = excludedRows.filter((r) => r.bucket.startsWith(PREDICATE_BUCKET));
+  const policyRows = excludedRows.filter((r) => !r.bucket.startsWith(PREDICATE_BUCKET));
+  const sumOf = (rows) => rows.reduce((t, r) => t + r.token_slots, 0n);
+  const predicateExcluded = sumOf(predicateRows);
+  const policyExcluded = sumOf(policyRows);
+
   // The ledger hash: a commitment to the token-slot result alone, independent of
   // any vault amount or config pubkey. Two parties can compare this even when
   // one of them is not computing a payout at all.
   const ledgerHash = sha256Hex(canonicalJson({
-    schema: 'escapement.ledger/v1',
+    schema: 'escapement.ledger/v2',
     mint, from, to, commitment: COMMITMENT,
     exclusions_hash: exclusions.hash,
+    predicate_hash: exclusions.predicate.hash,
+    policy_binding: exclusions.policyBinding,
     opening_state: openingState,
     rows: ledger.map((r) => ({ owner: r.owner, token_slots: r.tokenSlots })),
   }));
 
   let dist = null;
   let tree = null;
+  let domain = null;
   if (configPubkey !== null && vaultLamports !== null) {
+    // The leaf domain binds the deployment AND the policy. See merkle.mjs.
+    domain = commitmentDomain(configPubkey, exclusions.policyBinding);
     dist = distribute({ vaultLamports, ledger, prior });
-    tree = buildTree(configPubkey, dist.rows.map((r) => ({ claimant: r.owner, cumulative: r.cumulative })));
+    tree = buildTree(domain, dist.rows.map((r) => ({ claimant: r.owner, cumulative: r.cumulative })));
   }
 
   const closingStateHash = sha256Hex(canonicalJson(acc.closing));
@@ -187,6 +236,34 @@ export async function runIndex({
       `${exclusions.acknowledgementGaps.join(', ')}.`,
     );
   }
+  if (exclusions.predicate.rules.length === 0) {
+    warnings.push(
+      'NO PREDICATE RULES WERE APPLIED. `predicate.rules` is empty, so addresses with no possible claimant — ' +
+      'program-derived pool authorities, burned-LP AMM pools — accrue and are paid. Their share of the pot is ' +
+      'not distributed, it is stranded: the leaves exist and nothing can ever redeem them. This is a legal ' +
+      'and visible choice, and it is recorded in the root, but it should be a deliberate one.',
+    );
+  }
+  if (predicateExcluded > 0n) {
+    // Stated as a fraction of what the predicate faced, using integer arithmetic
+    // in basis points — no float reaches this artifact.
+    const faced = acc.totalIncluded + predicateExcluded;
+    const bps = faced === 0n ? 0n : (predicateExcluded * 10000n) / faced;
+    warnings.push(
+      `THE PREDICATE REMOVED ${predicateRows.length} ADDRESS(ES) HOLDING ${predicateExcluded} TOKEN-SLOTS — ` +
+      `${bps} basis points of what would otherwise have been entitled. Each is listed under ` +
+      '`predicate.excluded` with the rule that removed it. This is a mechanical exclusion, recomputable by ' +
+      'anyone from the addresses alone, but it is large enough to be worth checking rather than assuming: ' +
+      'see the predicate\'s documented false exclusions (smart-contract wallets, multisig vaults, ' +
+      'program treasuries) in predicate.mjs, and the `predicate.overrides` escape hatch.',
+    );
+  }
+  for (const o of exclusions.predicate.overrides) {
+    warnings.push(
+      `PREDICATE OVERRIDE in force: ${o.address} is treated as ${o.verdict} by operator declaration ` +
+      `rather than by the rules. Justification: ${o.justification} Evidence: ${o.evidence}`,
+    );
+  }
 
   const env = environment();
 
@@ -206,6 +283,13 @@ export async function runIndex({
     vault_lamports_source: vaultLamports === null ? null : vaultSource,
     exclusions_hash: exclusions.hash,
     exclusions_version: exclusions.canonical.version,
+    predicate_id: exclusions.predicate.id,
+    predicate_rules: exclusions.predicate.rules,
+    predicate_hash: exclusions.predicate.hash,
+    // The one value that stands for "everything about who gets paid that is not
+    // chain data". Bound into the merkle domain, so it cannot change silently.
+    policy_binding: exclusions.policyBinding,
+    merkle_domain: domain,
     opening_state: openingState,
     prior_root_source: priorSource,
   };
@@ -271,6 +355,32 @@ export async function runIndex({
       entries: exclusions.canonical.entries,
       matched: excludedRows,
       acknowledgement_gaps: exclusions.acknowledgementGaps,
+
+      // Discretionary exclusions only — what a human decided.
+      policy_excluded_addresses: policyRows.length,
+      policy_excluded_token_slots: policyExcluded,
+    },
+
+    // The mechanical half, reported on its own so its effect is never folded
+    // into the discretionary total. Every address it removed is named, with what
+    // it cost, so somebody who believes they were wrongly excluded can find
+    // themselves here rather than having to reverse-engineer their absence.
+    predicate: {
+      id: exclusions.predicate.id,
+      hash: exclusions.predicate.hash,
+      rules: exclusions.predicate.rules,
+      rule_descriptions: exclusions.predicate.rules.map((id) => ({ rule: id, summary: RULES[id].summary })),
+      overrides: exclusions.predicate.canonical.overrides,
+      excluded_addresses: predicateRows.length,
+      excluded_token_slots: predicateExcluded,
+      excluded: predicateRows
+        .map((r) => {
+          const rest = r.bucket.slice(PREDICATE_BUCKET.length);
+          const cut = rest.indexOf(':');
+          const owner = rest.slice(cut + 1);
+          return { owner, rule: rest.slice(0, cut), token_slots: r.token_slots, reason: exclusions.verdictFor(owner).reason };
+        })
+        .sort((a, b) => (a.owner < b.owner ? -1 : 1)),
     },
 
     distribution: dist === null ? null : {

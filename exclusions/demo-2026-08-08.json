@@ -1,14 +1,21 @@
 {
-  "schema": "escapement.exclusions/v1",
-  "version": "demo-2026-08-08.1",
+  "schema": "escapement.exclusions/v2",
+  "version": "demo-2026-08-08.2",
   "mint": "F1XdReoHL3GweeCG4sgoZGAdsUNt8sda8n5EE2TNpump",
   "effective_from_slot": 0,
-  "policy": "DEMONSTRATION SET. This excludes NOBODY. It exists so that a real run can be executed against a real mainnet mint without the code taking a position on a question the project has not answered. Escapement's published specification (/spec section 4.5) records four cases as NOT DECIDED: the pump.fun bonding curve, the post-graduation AMM pool whose LP tokens are burned, exchange omnibus accounts, and lending-protocol collateral. All four are listed as undecided below and none of them is excluded here, so every balance in the indexed range — including the bonding curve's and the pool's — accrues and is paid. That is deliberately the WRONG policy for a live distribution and the RIGHT policy for a demonstration: it means the artifact this produces reflects only what the chain says, with no discretion exercised by anybody. The mint named here is an unaffiliated third-party pump.fun token chosen because it was active in the indexed slot window. No token of ours exists.",
+  "policy": "DEMONSTRATION SET. The discretionary half of this document excludes NOBODY: `entries` is empty, so no human has decided that any address is not a beneficial holder. The mechanical half applies one predicate rule, `off_curve_owner`, which removes token accounts whose owner is not a valid ed25519 point and therefore cannot be signed for by any keypair. That is not a policy choice about who deserves the money; it is the observation that an address with no possible claimant is not a claimant, and that paying one strands the funds rather than distributing them. The rule's known errors are enumerated in src/predicate.mjs and are not hypothetical: it also removes multisig vaults and smart-contract wallets, which CAN claim by CPI, and it does not remove on-curve burn sinks, which cannot. No override is in force here. Escapement's published specification (/spec section 4.5) records four cases as NOT DECIDED: the pump.fun bonding curve, the post-graduation AMM pool whose LP tokens are burned, exchange omnibus accounts, and lending-protocol collateral. All four remain listed as undecided below, because the predicate does not answer any of them as policy questions — it only removes addresses that could not claim under any answer. Exchange omnibus accounts are on-curve and are therefore PAID by this run, which is the arguable outcome the open case is about. The mint named here is an unaffiliated third-party pump.fun token chosen because it was active in the indexed slot window. No token of ours exists.",
   "undecided": [
     "amm_pool",
     "bonding_curve",
     "cex_omnibus",
     "lending_collateral"
   ],
-  "entries": []
+  "entries": [],
+  "predicate": {
+    "id": "escapement.unclaimable/v1",
+    "rules": [
+      "off_curve_owner"
+    ],
+    "overrides": []
+  }
 }

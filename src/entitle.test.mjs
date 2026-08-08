@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * entitle.test.mjs — the rounding direction, proved rather than asserted.
  *

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
 /**
  * cli.mjs — `escapement index`, `escapement verify`, and the small tools around
  * them.
@@ -33,8 +34,16 @@ RANGE
   finalized before the run starts; the run aborts otherwise.
 
 REQUIRED, NO DEFAULT
-  --exclusions <file>   which balances are not beneficial holders. There is no
-                        built-in list and no inference. See exclusions.mjs.
+  --exclusions <file>   the policy document. Two halves, both hashed into the root:
+                          entries[]   DISCRETIONARY — addresses a human decided are
+                                      not beneficial holders. No built-in list, no
+                                      inference, justification and evidence required.
+                          predicate   MECHANICAL — which unclaimable-address rules to
+                                      apply. Also required, also never defaulted; the
+                                      only rule in v1 removes owners that are off the
+                                      ed25519 curve and therefore cannot be signed for.
+                        See exclusions.mjs and predicate.mjs. A run whose predicate
+                        returns UNDECIDED for any address aborts and writes nothing.
 
 TO PRODUCE A MERKLE ROOT (otherwise only the token-slot ledger is produced)
   --config <pubkey>     the deployment's config PDA; domain-separates the leaves
@@ -181,6 +190,11 @@ async function cmdIndex(args) {
   if (!args.quiet) {
     process.stderr.write(`escapement index\n  mint ${mint}\n  range [${from}, ${to}) — ${to - from} slots\n`);
     process.stderr.write(`  rpc ${new URL(rpc.url).host}\n  exclusions ${exclusions.path} (${exclusions.hash.slice(0, 16)}…, ${exclusions.entries.length} entries)\n`);
+    process.stderr.write(
+      `  predicate  ${exclusions.predicate.id} rules=[${exclusions.predicate.rules.join(', ') || 'none'}] ` +
+      `overrides=${exclusions.predicate.overrides.length} (${exclusions.predicate.hash.slice(0, 16)}…)\n` +
+      `  policy binding ${exclusions.policyBinding.slice(0, 16)}…\n`,
+    );
     if (exclusions.acknowledgementGaps.length) {
       process.stderr.write(`  note: /spec §4.5 cases neither excluded nor listed as undecided: ${exclusions.acknowledgementGaps.join(', ')}\n`);
     }
@@ -204,6 +218,8 @@ async function cmdIndex(args) {
       `  transactions     ${a.transactions.consumed} touching the mint (${a.transactions.failed_included_in_input_set} failed)\n` +
       `  owners entitled  ${a.accrual.owners_entitled}\n` +
       `  token-slots      ${a.accrual.total_token_slots_entitled} entitled / ${a.accrual.total_token_slots_excluded} excluded\n` +
+      `  predicate        removed ${a.predicate.excluded_addresses} address(es), ${a.predicate.excluded_token_slots} token-slots\n` +
+      `  policy set       removed ${a.exclusions.policy_excluded_addresses} bucket(s), ${a.exclusions.policy_excluded_token_slots} token-slots\n` +
       `  input_set_hash   ${a.input_set_hash}\n` +
       `  ledger_hash      ${a.ledger_hash}\n` +
       `  manifest_hash    ${a.manifest_hash}\n` +
@@ -301,12 +317,40 @@ function cmdExclusionsDiff(args) {
 
   process.stdout.write(`${beforePath}  ${d.hashBefore}\n${afterPath}  ${d.hashAfter}\n\n`);
   if (d.identical) { process.stdout.write('IDENTICAL — the two sets hash the same, so they produce the same root.\n'); return 0; }
-  process.stdout.write('DIFFERENT — this changes every payout in every period it applies to.\n\n');
+  process.stdout.write('DIFFERENT — this changes the root of every period it applies to.\n\n');
+
+  if (!d.predicate.identical) {
+    process.stdout.write('  PREDICATE (mechanical — who can possibly claim at all)\n');
+    if (d.predicate.idBefore !== d.predicate.idAfter) {
+      process.stdout.write(`    ~ id      ${d.predicate.idBefore} -> ${d.predicate.idAfter}\n`);
+    }
+    if (d.predicate.rulesChanged) {
+      process.stdout.write(
+        `    ~ rules   [${d.predicate.rulesBefore.join(', ')}] -> [${d.predicate.rulesAfter.join(', ')}]\n` +
+        '              A rule added removes every address it matches from every distribution it covers.\n' +
+        '              A rule removed pays them, and pays addresses that may not be able to claim.\n',
+      );
+    }
+    for (const o of d.predicate.overridesAdded) {
+      process.stdout.write(`    + override ${o.address} -> ${o.verdict}\n        ${o.justification}\n        evidence: ${o.evidence}\n`);
+    }
+    for (const o of d.predicate.overridesRemoved) {
+      process.stdout.write(`    - override ${o.address} (was ${o.verdict}; the rules now decide it again)\n`);
+    }
+    process.stdout.write('\n');
+  }
+
   for (const m of d.meta) process.stdout.write(`  ~ ${m.field}\n      before: ${JSON.stringify(m.before)}\n      after:  ${JSON.stringify(m.after)}\n`);
   for (const e of d.added) process.stdout.write(`  + ${e.scope} ${e.address}  [${e.kind}]\n      ${e.justification}\n      evidence: ${e.evidence}\n`);
   for (const e of d.removed) process.stdout.write(`  - ${e.scope} ${e.address}  [${e.kind}]  (this address is now PAID)\n`);
   for (const c of d.changed) process.stdout.write(`  ~ ${c.key}  fields changed: ${c.fields.join(', ')}\n`);
-  process.stdout.write('\n  An addition removes an address from every distribution it covers.\n  A removal adds one. Both are governance events (threat model D9).\n');
+  process.stdout.write(
+    '\n  An addition removes an address from every distribution it covers.\n' +
+    '  A removal adds one. Both are governance events (threat model D9).\n' +
+    `\n  policy binding ${d.bindingBefore}\n              -> ${d.bindingAfter}\n` +
+    '  That value is bound into the merkle domain, so this change alters the root\n' +
+    '  even where it alters nobody\'s payout.\n',
+  );
   return 0;
 }
 

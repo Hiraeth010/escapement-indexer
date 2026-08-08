@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * rpc.mjs — read-only Solana JSON-RPC.
  *

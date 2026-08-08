@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * canonical.mjs — one serialisation, so that "hash the inputs" is a definition
  * rather than an intention.

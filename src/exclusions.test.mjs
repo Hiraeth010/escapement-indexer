@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * exclusions.test.mjs — the discretionary surface, fenced.
  *
@@ -7,18 +8,19 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseExclusions, diffExclusions, loadExclusions, exclusionsTemplate, KNOWN_OPEN_CASES } from './exclusions.mjs';
+import { parseExclusions, diffExclusions, loadExclusions, exclusionsTemplate, KNOWN_OPEN_CASES, SUPERSEDED_SCHEMA } from './exclusions.mjs';
 import { accrue, ledgerFrom } from './accrue.mjs';
 import { pk, MINT, A, B, OA, OB, OC } from './mockchain.test.mjs';
 
 const base = (over = {}) => JSON.stringify({
-  schema: 'escapement.exclusions/v1',
+  schema: 'escapement.exclusions/v2',
   version: '2026-08-08.1',
   mint: MINT,
   effective_from_slot: 50,
   policy: 'Excludes nothing. All four /spec §4.5 cases remain open and are listed as undecided.',
   undecided: [...KNOWN_OPEN_CASES],
   entries: [],
+  predicate: { id: 'escapement.unclaimable/v1', rules: [], overrides: [] },
   ...over,
 });
 
@@ -135,6 +137,42 @@ test('a token-account-scoped exclusion removes that account regardless of owner'
 test('the template refuses to run until someone has actually written the policy', () => {
   const t = exclusionsTemplate(MINT, 100);
   assert.throws(() => parseExclusions(t, { mint: MINT, fromSlot: 100 }), /still the template placeholder/);
+});
+
+test('a v1 document is refused with an explanation rather than silently accepted', () => {
+  // The predicate declaration is REQUIRED, so a document written before it
+  // existed cannot be run as-is. Defaulting it would mean applying a rule
+  // nobody wrote down, which is the exact thing the predicate exists to stop.
+  const old = JSON.parse(base());
+  old.schema = SUPERSEDED_SCHEMA;
+  delete old.predicate;
+  assert.throws(() => parseExclusions(JSON.stringify(old)), /REQUIRED `predicate` block|adds a REQUIRED/);
+
+  const v2NoPredicate = JSON.parse(base());
+  delete v2NoPredicate.predicate;
+  assert.throws(() => parseExclusions(JSON.stringify(v2NoPredicate)), /`predicate` is required/);
+});
+
+test('the predicate declaration is part of the exclusion hash', () => {
+  const none = parseExclusions(base());
+  const withRule = parseExclusions(base({ predicate: { id: 'escapement.unclaimable/v1', rules: ['off_curve_owner'], overrides: [] } }));
+  assert.notEqual(none.hash, withRule.hash, 'declaring a rule must change the exclusion hash');
+  assert.notEqual(none.policyBinding, withRule.policyBinding);
+  assert.notEqual(none.predicate.hash, withRule.predicate.hash);
+});
+
+test('exclusions-diff reports a predicate change as its own event', () => {
+  const before = parseExclusions(base());
+  const after = parseExclusions(base({
+    version: '2026-08-09.1',
+    predicate: { id: 'escapement.unclaimable/v1', rules: ['off_curve_owner'], overrides: [] },
+  }));
+  const d = diffExclusions(before, after);
+  assert.equal(d.identical, false);
+  assert.equal(d.predicate.identical, false);
+  assert.equal(d.predicate.rulesChanged, true);
+  assert.deepEqual(d.predicate.rulesAfter, ['off_curve_owner']);
+  assert.notEqual(d.bindingBefore, d.bindingAfter);
 });
 
 test('unmentioned §4.5 cases are surfaced rather than silently allowed', () => {

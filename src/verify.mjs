@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * verify.mjs — a separate entry point that recomputes a published root and
  * localises a disagreement.
@@ -28,7 +29,7 @@
  */
 
 import { runIndex } from './run.mjs';
-import { independentRoot } from './verify-merkle.mjs';
+import { independentRoot, independentDomain } from './verify-merkle.mjs';
 import { LineHasher } from './canonical.mjs';
 
 /**
@@ -76,9 +77,27 @@ export async function runVerify({
   let indep = null;
   let internallyConsistent = true;
   if (dist) {
-    indep = independentRoot(configPubkey, dist.rows.map((r) => ({ claimant: r.owner, cumulative: r.cumulative })));
-    internallyConsistent = indep === computedRoot;
-    if (!internallyConsistent) {
+    // Two independent derivations of the leaf domain, then two independent
+    // constructions of the tree over it. The domain is checked separately
+    // because a domain mismatch and a tree mismatch have different causes and
+    // reporting them as one finding would lose that.
+    const ourDomain = artifact.params.merkle_domain;
+    const theirDomain = independentDomain(configPubkey, exclusions.policyBinding);
+    if (ourDomain !== theirDomain) {
+      internallyConsistent = false;
+      findings.push({
+        level: 'differ',
+        where: 'internal.domain',
+        detail:
+          `merkle.mjs derived the leaf domain ${ourDomain} and verify-merkle.mjs derived ${theirDomain} from ` +
+          `the same config pubkey and policy binding. These are two implementations of the same derivation in ` +
+          `this repository and they disagree, so one of them is wrong. No conclusion about the published root ` +
+          `is possible until this is fixed.`,
+      });
+    }
+    indep = independentRoot(theirDomain, dist.rows.map((r) => ({ claimant: r.owner, cumulative: r.cumulative })));
+    if (indep !== computedRoot) {
+      internallyConsistent = false;
       findings.push({
         level: 'differ',
         where: 'internal',
@@ -126,7 +145,12 @@ export function localise({ artifact, inputSet, publishedArtifact, publishedInput
   // 1. Parameters.
   const pa = publishedArtifact.params ?? {};
   const pb = artifact.params;
-  for (const k of ['mint', 'from_slot', 'to_slot', 'commitment', 'config_pubkey', 'exclusions_hash', 'opening_state']) {
+  // `predicate_hash` is checked BEFORE `exclusions_hash` even though the
+  // exclusion hash covers it. A predicate difference makes both differ, and
+  // "your predicate is not ours" is a far more actionable sentence than "your
+  // policy file is not ours".
+  for (const k of ['mint', 'from_slot', 'to_slot', 'commitment', 'config_pubkey',
+    'predicate_id', 'predicate_hash', 'exclusions_hash', 'opening_state']) {
     const same = k === 'opening_state'
       ? (pa[k]?.hash ?? null) === (pb[k]?.hash ?? null)
       : String(pa[k]) === String(pb[k]);
@@ -136,9 +160,13 @@ export function localise({ artifact, inputSet, publishedArtifact, publishedInput
         detail: `published ${JSON.stringify(pa[k])} vs recomputed ${JSON.stringify(pb[k])}. ` +
           (k === 'exclusions_hash'
             ? 'The exclusion set is not the one that produced the published root. Run `escapement exclusions-diff` on the two files.'
-            : k === 'opening_state'
-              ? 'The balance table carried in at from_slot differs. Supply the same --opening-state artifact the publisher used.'
-              : 'Nothing downstream of this is comparable until it matches.'),
+            : k === 'predicate_hash' || k === 'predicate_id'
+              ? 'The unclaimable-address PREDICATE differs — a different rule set, or a different override list. ' +
+                'That changes who is a claimant at all, so nothing downstream is comparable. `exclusions-diff` ' +
+                'prints the predicate section separately.'
+              : k === 'opening_state'
+                ? 'The balance table carried in at from_slot differs. Supply the same --opening-state artifact the publisher used.'
+                : 'Nothing downstream of this is comparable until it matches.'),
       });
       return out;
     }

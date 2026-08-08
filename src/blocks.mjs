@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * blocks.mjs — iterate BLOCKS, not addresses (D3), and account for every slot
  * positively (D4).

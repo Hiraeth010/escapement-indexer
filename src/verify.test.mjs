@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * verify.test.mjs — the verifier agrees when it should, disagrees when it
  * should, and says WHERE.
@@ -90,7 +91,7 @@ test('a changed exclusion set is named as the cause before anything else', async
   const { artifact, inputSet } = await runIndex({ ...RUN, rpc: mockRpc(chain) });
 
   const stricter = parseExclusions(JSON.stringify({
-    schema: 'escapement.exclusions/v1',
+    schema: 'escapement.exclusions/v2',
     version: '2026-08-08.2',
     mint: MINT,
     effective_from_slot: 0,
@@ -101,6 +102,7 @@ test('a changed exclusion set is named as the cause before anything else', async
       justification: 'Believed to be an exchange omnibus account; beneficial owners are off chain.',
       evidence: 'account note, 2026-08-08',
     }],
+    predicate: { id: 'escapement.unclaimable/v1', rules: [], overrides: [] },
   }), { mint: MINT, fromSlot: 100 });
 
   const res = await runVerify({

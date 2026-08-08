@@ -1,0 +1,31 @@
+escapement-indexer
+Copyright 2026 The Escapement Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+---
+
+This package has no runtime dependencies and vendors no third-party code.
+Everything it needs — base58, sha256 framing, the ed25519 on-curve test, the
+merkle construction — is implemented here against published specifications:
+
+  * ed25519 (RFC 8032) point decompression, in src/curve.mjs, follows the
+    procedure in curve25519-dalek's CompressedEdwardsY::decompress.
+  * The program-derived-address rule it relies on is Solana's, as documented
+    for find_program_address.
+
+Apache-2.0 was chosen over MIT deliberately. This code defines a distribution
+mechanism that other people are expected to reimplement in order to check it;
+Section 3's express patent grant is the part that matters for that, and a
+permissive licence without one would leave a reimplementer worse off than the
+original author.

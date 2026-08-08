@@ -1,14 +1,36 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * merkle.mjs — the tree, fully pinned (threat model D10).
  *
  * Every choice here is a place where two implementations can silently differ,
  * so every choice is written down rather than left to "the obvious thing":
  *
- *   leaf     = sha256( 0x00 || config_pubkey[32] || claimant[32] || cumulative_u64_le )
+ *   leaf     = sha256( 0x00 || domain[32] || claimant[32] || cumulative_u64_le )
  *   internal = sha256( 0x01 || min(l,r) || max(l,r) )                 // sorted pair
  *   ordering = leaves sorted ascending by claimant pubkey BYTES        // not base58 string
  *   odd node = PROMOTED UNCHANGED to the next level                    // not duplicated
  *   empty    = a domain-separated constant, never a hash of nothing
+ *
+ * ---------------------------------------------------------------------------
+ * THE DOMAIN, AND WHY IT IS NO LONGER JUST THE CONFIG PUBKEY
+ * ---------------------------------------------------------------------------
+ * The first 32 bytes of a leaf preimage are a DOMAIN SEPARATOR. In v1 that was
+ * the deployment's config PDA and nothing else, which separated deployments (a
+ * devnet proof cannot verify against mainnet) but left one hole: the exclusion
+ * policy entered the root only through its EFFECT. Two different policies that
+ * happened to move the same money produced the same root, so the published root
+ * was not a commitment to the policy that produced it.
+ *
+ * v2 closes that by binding the policy commitment into the domain:
+ *
+ *   domain = sha256( "escapement.merkle/v2:domain" || config_pubkey[32] || policy_binding[32] )
+ *
+ * where `policy_binding` covers the discretionary exclusion set AND the
+ * unclaimable-address predicate (see `exclusions.mjs`). Changing the predicate
+ * version, adding an override, or editing the policy prose now changes the root
+ * whether or not it changes a payout. The leaf preimage keeps its exact v1
+ * shape — same prefix byte, same 73 bytes, same proof structure — so an on-chain
+ * verifier stores one extra 32-byte field per epoch and is otherwise unchanged.
  *
  * The 0x00 / 0x01 prefixes are the second-preimage defence (T-09): an internal
  * node can never be presented as a leaf, because their preimages start with
@@ -25,10 +47,35 @@
  */
 
 import { sha256 } from './canonical.mjs';
-import { pubkeyBytes, comparePubkeys } from './base58.mjs';
+import { pubkeyBytes, comparePubkeys, b58encode } from './base58.mjs';
 
 export const LEAF_PREFIX = 0x00;
 export const NODE_PREFIX = 0x01;
+
+export const DOMAIN_TAG = 'escapement.merkle/v2:domain';
+
+/**
+ * Bind a deployment and a policy into the 32-byte leaf domain.
+ *
+ * Returned base58-encoded because a domain is used everywhere a pubkey was, and
+ * carrying one representation through the tree, the artifact and the proof means
+ * there is no second encoding to get wrong. It is not a pubkey and is not
+ * claimed to be one; it is 32 bytes written the way this project writes 32 bytes.
+ *
+ * @param {string} configPubkey base58 — the deployment's config PDA (C3)
+ * @param {string} policyBindingHex 64 lowercase hex — from `exclusions.mjs`
+ * @returns {string} base58
+ */
+export function commitmentDomain(configPubkey, policyBindingHex) {
+  if (typeof policyBindingHex !== 'string' || !/^[0-9a-f]{64}$/.test(policyBindingHex)) {
+    throw new Error(`commitmentDomain: policy binding must be 64 lowercase hex characters, got ${JSON.stringify(policyBindingHex)}`);
+  }
+  return b58encode(sha256(
+    Buffer.from(DOMAIN_TAG, 'utf8'),
+    pubkeyBytes(configPubkey, 'config'),
+    Buffer.from(policyBindingHex, 'hex'),
+  ));
+}
 
 /**
  * The root of an empty leaf set.
@@ -58,16 +105,16 @@ export function u64le(value) {
 
 /**
  * A leaf hash.
- * @param {string} configPubkey base58 — the deployment's config PDA. Domain
- *   separation across deployments (C3): a devnet proof must not verify against
- *   mainnet.
+ * @param {string} domain base58 32 bytes — from `commitmentDomain()`. Separates
+ *   deployments (C3: a devnet proof must not verify against mainnet) and
+ *   policies (a proof under one exclusion policy must not verify under another).
  * @param {string} claimant base58
  * @param {bigint} cumulative lamports ever owed to `claimant` as of this root
  */
-export function leafHash(configPubkey, claimant, cumulative) {
+export function leafHash(domain, claimant, cumulative) {
   return sha256(
     Uint8Array.of(LEAF_PREFIX),
-    pubkeyBytes(configPubkey, 'config'),
+    pubkeyBytes(domain, 'domain'),
     pubkeyBytes(claimant, 'claimant'),
     u64le(cumulative),
   );
@@ -91,11 +138,12 @@ const hex = (u8) => Buffer.from(u8).toString('hex');
 /**
  * Build a tree.
  *
+ * @param {string} domain base58 32 bytes — from `commitmentDomain()`
  * @param {{claimant: string, cumulative: bigint}[]} entries — need NOT be sorted;
  *   this function sorts them by claimant bytes, which is the pinned order.
  * @returns {{ root: string, levels: Uint8Array[][], order: string[] }}
  */
-export function buildTree(configPubkey, entries) {
+export function buildTree(domain, entries) {
   const sorted = [...entries].sort((a, b) => comparePubkeys(a.claimant, b.claimant));
 
   for (let i = 1; i < sorted.length; i++) {
@@ -112,7 +160,7 @@ export function buildTree(configPubkey, entries) {
     return { root: EMPTY_ROOT, levels: [[]], order: [] };
   }
 
-  const leaves = sorted.map((e) => leafHash(configPubkey, e.claimant, e.cumulative));
+  const leaves = sorted.map((e) => leafHash(domain, e.claimant, e.cumulative));
   const levels = [leaves];
 
   let cur = leaves;
@@ -149,8 +197,8 @@ export function proofFor(tree, index) {
 }
 
 /** Verify a leaf against a root. Mirrors what the on-chain program must do. */
-export function verifyProof({ configPubkey, claimant, cumulative, proof, root }) {
-  let cur = leafHash(configPubkey, claimant, cumulative);
+export function verifyProof({ domain, claimant, cumulative, proof, root }) {
+  let cur = leafHash(domain, claimant, cumulative);
   for (const sibHex of proof) {
     const sib = Uint8Array.from(Buffer.from(sibHex, 'hex'));
     if (sib.length !== 32) throw new Error('verifyProof: proof element is not 32 bytes');

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * determinism.test.mjs — the tests the trust model actually rests on.
  *

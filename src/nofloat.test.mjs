@@ -1,20 +1,29 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * nofloat.test.mjs — A1/D7 as a build failure rather than a code-review habit.
  *
  * "No floating point anywhere in the entitlement path" is the kind of rule that
  * is true on the day it is written and false six months later. This is the lint.
  *
- * Scope is deliberately narrow and named: the four modules that compute a
- * number a claimant is paid from. Slot indices, array lengths, retry backoff and
- * base58 digit conversion are integer arithmetic on small values elsewhere in
- * the tree and are not covered — a lint that flags everything gets suppressed.
+ * Scope is deliberately narrow and named: the modules that decide who is paid
+ * and how much. Slot indices, array lengths, retry backoff and base58 digit
+ * conversion are integer arithmetic on small values elsewhere in the tree and
+ * are not covered — a lint that flags everything gets suppressed.
+ *
+ * `curve.mjs` is deliberately NOT in scope even though `predicate.mjs` depends
+ * on it. It is ed25519 field arithmetic: every value is a BigInt, every operator
+ * is modular, and it contains one genuine BigInt division by a constant. The
+ * lint would flag that division and the only way to pass would be to disable the
+ * rule, which is worse than naming the exemption here. What protects that file
+ * instead is `curve.test.mjs`, which pins it against Node's own ed25519 key
+ * generation and against Solana's own PDA derivation rule.
  */
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const ENTITLEMENT_PATH = ['accrue.mjs', 'entitle.mjs', 'merkle.mjs', 'extract.mjs'];
+const ENTITLEMENT_PATH = ['accrue.mjs', 'entitle.mjs', 'merkle.mjs', 'extract.mjs', 'predicate.mjs'];
 
 /**
  * Strip comments, string/template literals and regex literals, so that prose

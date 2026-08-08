@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * merkle.test.mjs — every pinned choice in D10, asserted.
  *
@@ -8,8 +9,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { buildTree, leafHash, nodeHash, proofFor, verifyProof, u64le, EMPTY_ROOT, LEAF_PREFIX, NODE_PREFIX } from './merkle.mjs';
-import { independentRoot } from './verify-merkle.mjs';
+import { buildTree, leafHash, nodeHash, proofFor, verifyProof, u64le, commitmentDomain, DOMAIN_TAG, EMPTY_ROOT, LEAF_PREFIX, NODE_PREFIX } from './merkle.mjs';
+import { independentRoot, independentDomain } from './verify-merkle.mjs';
 import { pubkeyBytes, comparePubkeys, b58encode } from './base58.mjs';
 import { pk, CONFIG } from './mockchain.test.mjs';
 
@@ -99,9 +100,9 @@ test('proofs verify for every leaf, at every tree size from 1 to 33', () => {
       const claimant = t.order[i];
       const cumulative = entries.find((e) => e.claimant === claimant).cumulative;
       const proof = proofFor(t, i);
-      assert.ok(verifyProof({ configPubkey: CONFIG, claimant, cumulative, proof, root: t.root }), `n=${n} i=${i}`);
+      assert.ok(verifyProof({ domain: CONFIG, claimant, cumulative, proof, root: t.root }), `n=${n} i=${i}`);
       // wrong amount must fail
-      assert.equal(verifyProof({ configPubkey: CONFIG, claimant, cumulative: cumulative + 1n, proof, root: t.root }), false);
+      assert.equal(verifyProof({ domain: CONFIG, claimant, cumulative: cumulative + 1n, proof, root: t.root }), false);
     }
   }
 });
@@ -112,10 +113,61 @@ test('a proof from one deployment does not verify against another (C3)', () => {
   const t = buildTree(CONFIG, entries);
   const proof = proofFor(t, 0);
   assert.equal(
-    verifyProof({ configPubkey: otherConfig, claimant: t.order[0], cumulative: 1n, proof, root: t.root }),
+    verifyProof({ domain: otherConfig, claimant: t.order[0], cumulative: 1n, proof, root: t.root }),
     false,
   );
   assert.notEqual(buildTree(otherConfig, entries).root, t.root);
+});
+
+// ---------------------------------------------------------------------------
+// The v2 domain: the leaf's first 32 bytes bind the deployment AND the policy.
+// ---------------------------------------------------------------------------
+
+const BINDING_A = 'a'.repeat(64);
+const BINDING_B = 'b'.repeat(64);
+
+test('the commitment domain is exactly sha256(tag || config || policy_binding)', () => {
+  const expected = createHash('sha256')
+    .update(Buffer.from(DOMAIN_TAG, 'utf8'))
+    .update(Buffer.from(pubkeyBytes(CONFIG)))
+    .update(Buffer.from(BINDING_A, 'hex'))
+    .digest();
+  assert.equal(hex(pubkeyBytes(commitmentDomain(CONFIG, BINDING_A))), hex(expected));
+  assert.equal(DOMAIN_TAG, 'escapement.merkle/v2:domain');
+});
+
+test('the second implementation derives the same domain', () => {
+  for (const b of [BINDING_A, BINDING_B, '0'.repeat(64), 'f'.repeat(64)]) {
+    assert.equal(independentDomain(CONFIG, b), commitmentDomain(CONFIG, b), `binding ${b.slice(0, 8)}`);
+  }
+  // Leading zero bytes in the digest must survive base58 encoding on both sides,
+  // which is the one place a hand-rolled encoder usually gets it wrong.
+  for (let i = 0; i < 200; i++) {
+    const b = createHash('sha256').update(String(i)).digest('hex');
+    assert.equal(independentDomain(CONFIG, b), commitmentDomain(CONFIG, b), `i=${i}`);
+  }
+});
+
+test('a different policy binding is a different root, even over identical leaves', () => {
+  const entries = Array.from({ length: 7 }, (_, i) => ({ claimant: pk(i + 1), cumulative: BigInt(i + 1) }));
+  const rootA = buildTree(commitmentDomain(CONFIG, BINDING_A), entries).root;
+  const rootB = buildTree(commitmentDomain(CONFIG, BINDING_B), entries).root;
+  assert.notEqual(rootA, rootB, 'the policy must be inside the root, not merely beside it');
+
+  // And a proof under one policy must not verify under another.
+  const t = buildTree(commitmentDomain(CONFIG, BINDING_A), entries);
+  const proof = proofFor(t, 0);
+  assert.equal(verifyProof({
+    domain: commitmentDomain(CONFIG, BINDING_B), claimant: t.order[0],
+    cumulative: entries.find((e) => e.claimant === t.order[0]).cumulative, proof, root: t.root,
+  }), false);
+});
+
+test('a malformed policy binding is refused rather than coerced', () => {
+  assert.throws(() => commitmentDomain(CONFIG, 'abc'), /64 lowercase hex/);
+  assert.throws(() => commitmentDomain(CONFIG, 'A'.repeat(64)), /64 lowercase hex/);
+  assert.throws(() => commitmentDomain(CONFIG, undefined), /64 lowercase hex/);
+  assert.throws(() => independentDomain(CONFIG, 'abc'), /64 lowercase hex/);
 });
 
 test('the second implementation agrees at every tree size from 0 to 65', () => {

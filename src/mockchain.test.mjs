@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * mockchain.test.mjs — a synthetic chain, and the helpers every other test uses.
  *
@@ -14,6 +15,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { b58encode } from './base58.mjs';
+import { isOnCurve } from './curve.mjs';
+import { nonePredicate } from './predicate.mjs';
+import { policyBinding } from './exclusions.mjs';
 
 /** Deterministic distinct pubkeys. */
 export function pk(n) {
@@ -23,6 +27,31 @@ export function pk(n) {
   b[31] = 7; // keep the tail non-trivial so byte ordering is actually exercised
   return b58encode(b);
 }
+
+/**
+ * Deterministic distinct pubkeys that are ON the ed25519 curve.
+ *
+ * `pk()` produces arbitrary 32-byte values, roughly half of which are off-curve
+ * and would therefore be removed by the exclusion predicate. Tests that are
+ * about accrual, merkle construction or verification must not accidentally
+ * depend on which side of the curve a fixture landed on, so they use this: walk
+ * the last byte until the value is a valid Edwards point. Predicate tests use
+ * `offCurvePk()` and get the opposite guarantee.
+ */
+function seek(n, wantOnCurve) {
+  for (let salt = 0; salt < 256; salt++) {
+    const b = new Uint8Array(32);
+    b[0] = n & 0xff;
+    b[1] = (n >> 8) & 0xff;
+    b[30] = salt;
+    b[31] = 7;
+    if (isOnCurve(b) === wantOnCurve) return b58encode(b);
+  }
+  throw new Error(`no ${wantOnCurve ? 'on' : 'off'}-curve pubkey found for seed ${n}`);
+}
+
+export const onCurvePk = (n) => seek(n, true);
+export const offCurvePk = (n) => seek(n, false);
 
 export const MINT = pk(1);
 export const CONFIG = pk(2);
@@ -125,11 +154,15 @@ export function mockRpc(chain, { failSlots = [], hideFromGetBlocks = [], jitter 
  *   OB          400×5   = 2000
  *   OC          600×2   = 1200
  */
+// Owners are pinned ON-CURVE so that the accrual, merkle and verification tests
+// stay tests of accrual, merkle and verification. If a fixture owner happened to
+// be off-curve, enabling the predicate in a test would delete it from the ledger
+// and the failure would look like an arithmetic bug.
 export const A = pk(10);
 export const B = pk(11);
-export const OA = pk(20);
-export const OB = pk(21);
-export const OC = pk(22);
+export const OA = onCurvePk(20);
+export const OB = onCurvePk(21);
+export const OC = onCurvePk(22);
 
 export function scenario(overrides = {}) {
   return mockChain({
@@ -154,13 +187,26 @@ export function scenario(overrides = {}) {
   });
 }
 
+/**
+ * Exclude nobody, by any mechanism: no discretionary entries and no predicate
+ * rules. The baseline the accrual and verification tests run against.
+ */
+const NO_PREDICATE = nonePredicate();
+const NO_EXCLUSIONS_HASH = 'e'.repeat(64);
+
 export const OPEN_EXCLUSIONS = {
-  hash: 'test-no-exclusions',
-  canonical: { schema: 'escapement.exclusions/v1', version: 'test', mint: MINT, effective_from_slot: 0, policy: 'test: exclude nobody', undecided: [], entries: [] },
+  hash: NO_EXCLUSIONS_HASH,
+  canonical: {
+    schema: 'escapement.exclusions/v2', version: 'test', mint: MINT, effective_from_slot: 0,
+    policy: 'test: exclude nobody', undecided: [], entries: [], predicate: NO_PREDICATE.canonical,
+  },
+  predicate: NO_PREDICATE,
+  policyBinding: policyBinding(NO_EXCLUSIONS_HASH, NO_PREDICATE.hash),
   entries: [],
   owners: new Set(),
   tokenAccounts: new Set(),
   acknowledgementGaps: [],
+  verdictFor: () => ({ verdict: 'claimable', rule: null, reason: null }),
   classify: () => null,
 };
 
