@@ -1,0 +1,650 @@
+{
+  "accrual": {
+    "decimals": 6,
+    "owners_entitled": 30,
+    "spans": 10,
+    "total_token_slots_entitled": "783404404771410",
+    "total_token_slots_excluded": "0",
+    "unit": "token-slots (raw token base units × slots)"
+  },
+  "closing_state": [
+    {
+      "account": "Ve6PRcCWxZdHHnJRW8dQy73tiyhvXqaiKbrL7AttXpF",
+      "amount": "172023544816",
+      "owner": "DnD9N2D2Qkd5D18UFxAA2U9ptuoWVYLSMEFGrFiCRCAs"
+    },
+    {
+      "account": "y9exGJ1AonhgRsDKJNdLccA7VemVh9gtF3gHh9rNsn8",
+      "amount": "1414223206",
+      "owner": "4BQ6ATUt26GFdiYQfht23iwfKyYD9D7XbL5ATqNGk3xK"
+    },
+    {
+      "account": "2UyoTnAQpDDJSdPoppDRYhu6hk7C28PtHDQG3aBboxHY",
+      "amount": "7165383",
+      "owner": "26XchA9wjMv8CCEX6ugnzaoYi7DYfVdR97nc9zyZx2Uz"
+    },
+    {
+      "account": "2thoCwBxbtFg1UMTb884n9E2soRLFGKQdU6qbKexjZZt",
+      "amount": "10223842713797",
+      "owner": "D93hBBFx39pEBxdAR3AzRsiZsN2J1pJk9W6PuXxADw5v"
+    },
+    {
+      "account": "3jxJWmc5crVDq5DPZrF1YZcc5CzAEvMPEv77qXiGxrK8",
+      "amount": "75790923",
+      "owner": "FireuLYd4yjJBhXQyBs3Mq6ZpNEjyHPNPG2eqhTP9RHV"
+    },
+    {
+      "account": "49fHY3JND22Qi65L53w3FQ7AY2nu8R42dJMv8t6yyEZ2",
+      "amount": "418680878872",
+      "owner": "2tgUbS9UMoQD6GkDZBiqKYCURnGrSb6ocYwRABrSJUvY"
+    },
+    {
+      "account": "4C4dcPCBNMHzegC5NnuXQzdE5bBWBBBtPCxHXterimwH",
+      "amount": "620432790145",
+      "owner": "kEFiAX3jo5NmemysQov342TZ9mGh6yp92GDRjhA8XDf"
+    },
+    {
+      "account": "4fV6TvYuFNQzVXZvjk56ZC3ZAgicdj6bUzUqmYPQ5P9J",
+      "amount": "0",
+      "owner": "DsCJ5siuJTPQtQa3A9N69azGZaWtUPzi9VPp2G9Jfpx9"
+    },
+    {
+      "account": "529Pmm8m36tVS54ne3HBVYiJaPMfgTSBFP6TFmtm61t7",
+      "amount": "0",
+      "owner": "ARu4n5mFdZogZAravu7CcizaojWnS6oqka37gdLT5SZn"
+    },
+    {
+      "account": "5DoMvfwXo35qpX31LA9r9WgMpRCRjMGDEcqpNpVYaNJq",
+      "amount": "0",
+      "owner": "7fFS4BLB1sdLqSb4y7q3wskPXCDwAip58KP6Pf9wo95g"
+    },
+    {
+      "account": "5LFxS7KB3rDY8Qexw4aEhCS4V42LH5cTum14P2DAjJ6q",
+      "amount": "7280700237",
+      "owner": "B3HQRViPGZzrF8Dhmpky2Bs7aGavyaq76W88Ar28h18U"
+    },
+    {
+      "account": "5PZxp6f14H3xXHQDNosisz8Y6SbcTmikiDHtjK41hhH3",
+      "amount": "20039085862",
+      "owner": "7PF9vPtQzDcDKN6LpHKP3M397r6wnQ4WqMLVP1SXrgnH"
+    },
+    {
+      "account": "6A2k7coqQR7Qb9NFVurWbAmDx4nftw2FDPWLk9hAQKZN",
+      "amount": "0",
+      "owner": "XUrKb2aK4jBm77q75EemchVUNRTJyeFQ5KebTJygPhF"
+    },
+    {
+      "account": "6do9oW1wxAkD3Q6Jjjj7K3kasWD7iWxKLfiK5AfB8vrn",
+      "amount": "4560269672",
+      "owner": "GZBidcjjhhqUEK1qheMQjPpea48cRJT7pUCbaHq3mUWe"
+    },
+    {
+      "account": "6onCpujU1fVAXQWSfzi7jsrb4W6RZbhCCXTiT6uSTNfF",
+      "amount": "0",
+      "owner": "A7FMMgue4aZmPLLoutVtbC7gJcyqkHybUieiaDg9aaVE"
+    },
+    {
+      "account": "7GGfCtuxjtgBdrfEWmC3Eu6nQL5PEL8YzHjNNXfB2A1Q",
+      "amount": "2918",
+      "owner": "A3Go4vP3WHWF23S747uZG9mSMAqLVGRYQvA2tieShRHu"
+    },
+    {
+      "account": "7ffZJucLGCPyMVYws2iGD88xziW69evQBc6im6jwKiEf",
+      "amount": "0",
+      "owner": "6KPYDyuRnpuKcm1TerUmwLd2BcaihvhF4Ccrr8beruu2"
+    },
+    {
+      "account": "82JrJ3XsDGFHcJgnxP4PuTzLT282NWoWjEDtPrBvhmdJ",
+      "amount": "0",
+      "owner": "D3Lw2edfXod9zCqMFPnhmYcaKfiWG2soqqnHfM2Pomes"
+    },
+    {
+      "account": "8KpMSpKVUxdPE5oUZc4aSjRBUptYNr1sfmSK6usTawtd",
+      "amount": "93444423947",
+      "owner": "13WXDkCej41Dudkk1nxsPrKoWgAieJZ1tLJGLw8qfxfA"
+    },
+    {
+      "account": "8RzsS5MBLK7ZL5szEeVgBNigGwix8kaPoUKwZBD3uWNA",
+      "amount": "120347906952",
+      "owner": "vZ8dd5wVgn3y7ysRxaCtWa3muJVtF6c79D1DJY4a5gb"
+    },
+    {
+      "account": "9NHYC4Rzok7yTkbK556j4ECGPsssrn5Fp9Wva7FvUKAC",
+      "amount": "5267",
+      "owner": "6WJfN1fqrEEMSVKnzZkR4vJTMTxBaqvka2KA7aQHJMfF"
+    },
+    {
+      "account": "A1eSehvp5T3D25x6mWWLCY2YrKwSvYxcjZ4MSLvxJkof",
+      "amount": "0",
+      "owner": "EqhWguQKwXE7uMcH3rsfbpbfDvomehgeRiAtbbh4vYsv"
+    },
+    {
+      "account": "AjYJWghGLF316CyzavcFaXBGxJpye1E52rJDZzwdXQpv",
+      "amount": "0",
+      "owner": "9R256yC25AYX7DSUnvArFEAvQBt93USddNwhAaSVFxCE"
+    },
+    {
+      "account": "BAsi5Nf264p3j32dnwQ1LJUVeby3SkGvmQz4VYJipJmV",
+      "amount": "0",
+      "owner": "EQ9odpJBkic75XFJWAYQJgV12Dog9xFTYywum7S8Mrfg"
+    },
+    {
+      "account": "BT2wVgsFQH9Liqp6vDbZzxoGDVRYVE5ByVMPwo3kvAXc",
+      "amount": "0",
+      "owner": "HDNkDSWeo21KCDyXWrmv5SsSURqTk4KhmbHniVCN3eHr"
+    },
+    {
+      "account": "BToQYwmBfdWEMJZEtKbyGB7434JT5Ji1Sg9tgRv4g45c",
+      "amount": "37969448222",
+      "owner": "8KWEBTiqddd822kmxcaLD2Bupt7N7esaWz4H7GrBU6kR"
+    },
+    {
+      "account": "C9thgm13K7e5X9SyusFHMAcvsuspa5ou4CsB2UmupwvU",
+      "amount": "0",
+      "owner": "EKMyLLujPDEQLLc7Xvx7ojc5rr5nFQPkvpoYK7bENH2"
+    },
+    {
+      "account": "Cd4mTwNduLLjxeeeYeRvVtMHDnK6d1CYRcuKTkrNZVeA",
+      "amount": "38187154028",
+      "owner": "5ioBGgmacF92sGF3Mw4dSBUAUYB5iXZi5PrdLtrJ6Yk4"
+    },
+    {
+      "account": "Cszad8PpdjhboGhh3zMsGEFGWSTKVbwHrjfUv9DHRFP9",
+      "amount": "18090461",
+      "owner": "4YP7YJFDpjJ9DePSH64ouj8cs52CZip7UfCbGBK98Nyg"
+    },
+    {
+      "account": "DQ5Y5RPuh7BSmB83BNn8FuRTLSekUbX2JqdT25ubt57P",
+      "amount": "279417829484",
+      "owner": "6DtdZ351EEcT6mczhyefB59PrymsmezLbRTJAunTwiWn"
+    },
+    {
+      "account": "Dc1ep2KXJJfYzu81eVtuDkLA889eDBMsEZr9qAg3xnAd",
+      "amount": "180540689",
+      "owner": "FfAJbv3prDQUybTNkS3EGaoSbkkbSLy1Eahe5MMxMG9t"
+    },
+    {
+      "account": "De5zNwL57gjVYMR71RWf5K7iKUdqc3jgHp7oa9W5K1WX",
+      "amount": "820362936935",
+      "owner": "7Eow5GYXX6oDVhHBhCYc26mDmuqcHyZK9jzLTFZC3wqi"
+    },
+    {
+      "account": "Dm1fV8bfhxpnAjgz2gZAAJdukfYqpxp6VFZZjEnZHrNF",
+      "amount": "0",
+      "owner": "8TPWakvWw4xQbk7uAYdNjZiDKKHgv9GE5GebzsbtUaHr"
+    },
+    {
+      "account": "Ed3NRgnJGmXgzqF3DELxJXXaTg1Nngiq1nMP1Lrtxton",
+      "amount": "1696060870725",
+      "owner": "CpZLVv63mUSRruto9RtciDumV3GAahUJrbDffRokTvUU"
+    },
+    {
+      "account": "F25gWFuVGSanoSBKiN7Re3u9AHZZfZUgCKtdwMCLukGt",
+      "amount": "48551185646",
+      "owner": "BqE7F2hatZqWfbz5mjNnQsm2sTbYmGwHHhS31h7kdALR"
+    },
+    {
+      "account": "FQWN6sQxFjGTZwFoqRmNh1YTFmHKx9mha8c67vAJ7L6i",
+      "amount": "62693694073580",
+      "owner": "HgpbxqtHN8uuntiPsmpMGzJUhYLFfpC1H24M5phdYomL"
+    },
+    {
+      "account": "FbiQTDnNgrxMxEQ3Z7X55oswnPhLn3ej9YSdya2SXBup",
+      "amount": "61175943433",
+      "owner": "HMx8Sc7NdAjaytPNB6JiyhqwaGxSbbAjgKiUT7ebFRu3"
+    },
+    {
+      "account": "G2bTd9ZikhiDS2e3HjxGzrqbmSf7yRpwhRmdZm1ieZbY",
+      "amount": "26855244964",
+      "owner": "ChAhnUiPC9xd2MDTGyVffehqAMF7TEnnCCXNmpEGo6CJ"
+    },
+    {
+      "account": "GhjjVBKy3raJSf69kpK8KA9XBuiNc8XPE7iTfpAcQqxn",
+      "amount": "0",
+      "owner": "FWUZhA8GroakGvfRS35PiQZZF8yVapHLA64VK8BftJ8x"
+    },
+    {
+      "account": "H7jAtb4n6EsqCcMwPLQokvb6HgUoXvWH8jfreRqkGADh",
+      "amount": "9585833979",
+      "owner": "BTyfWWYf8sWLUDEVUevzDqDEqbAKE3u3K31AD6732hRB"
+    },
+    {
+      "account": "HGK4bRZUbp2VK5VGqtYYNNAzdrmwkCkqXKbg1QSDXbNm",
+      "amount": "207434093570",
+      "owner": "8psNvWTrdNTiVRNzAgsou9kETXNJm2SXZyaKuJraVRtf"
+    },
+    {
+      "account": "HMMgkmg1K24ARKUYUeS22YoFhc37isRiktSZzMuwAaZR",
+      "amount": "0",
+      "owner": "CzYQ2kFnBxsNEt9Zy34vQ3n5fSDhvA4o4XaTnq1rLvyr"
+    },
+    {
+      "account": "HTubGehv1BWswP4JAaWiZMDKDpJwhQQ6dzaLCkxbpFBk",
+      "amount": "10556540490",
+      "owner": "6dFggcCvogHVXXZL41e1adj6uXFtJTbmkAFQSL9MYixZ"
+    },
+    {
+      "account": "HcpnutaTzFjnWmyxTDK1xgz31Np8KoqDtf74TyDxRkux",
+      "amount": "0",
+      "owner": "AXmnRBrNtYYyyo82cLBBhnWJ7o1iqNLZbuEVpDB3V666"
+    },
+    {
+      "account": "HioiKaSosRxi8T4xoR5YN9UvD17LvUYKS1N5DYmkg2Q8",
+      "amount": "4899627588705",
+      "owner": "6Jtc91o51YXUzezsC8ZLaqYYfh3aPWJQBvfzwYea7jUo"
+    },
+    {
+      "account": "HwRgjx71qLSkfsZGs7zTxpBrj3GubHDnaCd4zM71cS8g",
+      "amount": "1054500405460",
+      "owner": "AiJncJexFGbpTa3y8jkuzVLXUMuAyf88VZYPmUqz42ue"
+    },
+    {
+      "account": "J5d2HSomeSdvJmd2duFGHPBDLMYixrET5NmH7SvdB2rz",
+      "amount": "0",
+      "owner": "HLcE4TD6EuAPTq2GY1QXjbKDP9zBvnBccVVWo6apdT3N"
+    }
+  ],
+  "closing_state_hash": "f53ad53e9826c367d779fcc16f0322b37a9014b80e1a3db10587b53ac98466ee",
+  "distribution": {
+    "distributed_lamports": "999999986",
+    "remainder_bound_lamports": "29",
+    "remainder_lamports": "14",
+    "rounding": "floor — truncation is retained by the vault, never paid out (see entitle.mjs)",
+    "vault_lamports": "1000000000"
+  },
+  "environment": {
+    "indexer_git_commit": "143631bc8f277086de7b216c99cc9c118b230d10",
+    "indexer_git_dirty": false,
+    "indexer_source_files": [
+      "accrue.mjs 680880f59cf40ba126179c453bcb662f6c1cbc558bad4951564a1e1c92acfcc1",
+      "base58.mjs b0c94af563807ae6fadb86a9c822909279f89c74a9cfeaee085d17c5b52324b0",
+      "blocks.mjs 5739fade3e98ad46b721c0d522024411f83635f9a31d9a92f965a5f3860e4deb",
+      "canonical.mjs 0062eb64f16a5e1ff4db351bb586a94c5dd029e071ae562566eac5f1b9fe3065",
+      "cli.mjs d559196a5981744021eaa7bc819732419a80e402817d49dfa9d3d6fc2ea5d83a",
+      "entitle.mjs c3adc74781cf1fd8a69e12c534b5e1fb61ef1a13dc0d99eb644460cd0c17f79d",
+      "exclusions.mjs c43fa365006c125b1afe3db4fe6f8a661354a050fcb88b3492e226b3fe297b58",
+      "extract.mjs af53d93f0da71486bd9f62393ce49b8b8c64a1590de5c25bc2c3dc7814ac324e",
+      "merkle.mjs 10ff8a8c774af8f68f92b5fc76c79a2c5af2c08383acb2d21068aac46f668d8a",
+      "rpc.mjs b50a427de9365fad5c3959fe9ed55eea4e630d8cc84ef9cdc76d149942026aac",
+      "run.mjs 165b911ddd84beca788d68408ba71d665aa48e3bfca542be46bd6d31b60d03a8",
+      "verify-merkle.mjs 25bb169b40d051beb8d66ea0cff851ec4c4eeb26db8f766c6a742be015e03b08",
+      "verify.mjs 8f6638f4fdc0a33e2003f0a44f47df0b3004cdbb95336e58e55df1bb4fae8e3e",
+      "version.mjs 97837d800bf462316961dc1dd31892c3ebffd75248d5be54b51071968b445aef"
+    ],
+    "indexer_source_hash": "e1daf76703a2acdf492f28376f85cdc716da31b28a47c85db8a156347900d590",
+    "node_version": "v24.13.0",
+    "platform": "win32-x64",
+    "schema": "escapement.artifact/v1"
+  },
+  "exclusions": {
+    "acknowledgement_gaps": [],
+    "effective_from_slot": 0,
+    "entries": [],
+    "hash": "17fb09ec568e4ee1f3bce9cddbd22557335766e290f87596d4c257495645af2f",
+    "matched": [],
+    "policy": "DEMONSTRATION SET. This excludes NOBODY. It exists so that a real run can be executed against a real mainnet mint without the code taking a position on a question the project has not answered. Escapement's published specification (/spec section 4.5) records four cases as NOT DECIDED: the pump.fun bonding curve, the post-graduation AMM pool whose LP tokens are burned, exchange omnibus accounts, and lending-protocol collateral. All four are listed as undecided below and none of them is excluded here, so every balance in the indexed range — including the bonding curve's and the pool's — accrues and is paid. That is deliberately the WRONG policy for a live distribution and the RIGHT policy for a demonstration: it means the artifact this produces reflects only what the chain says, with no discretion exercised by anybody. The mint named here is an unaffiliated third-party pump.fun token chosen because it was active in the indexed slot window. No token of ours exists.",
+    "undecided": [
+      "amm_pool",
+      "bonding_curve",
+      "cex_omnibus",
+      "lending_collateral"
+    ],
+    "version": "demo-2026-08-08.1"
+  },
+  "indexer_git_commit": "143631bc8f277086de7b216c99cc9c118b230d10",
+  "indexer_source_hash": "e1daf76703a2acdf492f28376f85cdc716da31b28a47c85db8a156347900d590",
+  "input_set_hash": "d80a7d4d98fe4772e94585041b07ff2142460dda1ab3b194f4b44d6cd92f9133",
+  "ledger": [
+    {
+      "owner": "13WXDkCej41Dudkk1nxsPrKoWgAieJZ1tLJGLw8qfxfA",
+      "token_slots": "934444239470"
+    },
+    {
+      "owner": "kEFiAX3jo5NmemysQov342TZ9mGh6yp92GDRjhA8XDf",
+      "token_slots": "6204327901450"
+    },
+    {
+      "owner": "vZ8dd5wVgn3y7ysRxaCtWa3muJVtF6c79D1DJY4a5gb",
+      "token_slots": "1203479069520"
+    },
+    {
+      "owner": "26XchA9wjMv8CCEX6ugnzaoYi7DYfVdR97nc9zyZx2Uz",
+      "token_slots": "71653830"
+    },
+    {
+      "owner": "2tgUbS9UMoQD6GkDZBiqKYCURnGrSb6ocYwRABrSJUvY",
+      "token_slots": "4186808788720"
+    },
+    {
+      "owner": "4BQ6ATUt26GFdiYQfht23iwfKyYD9D7XbL5ATqNGk3xK",
+      "token_slots": "14142232060"
+    },
+    {
+      "owner": "4YP7YJFDpjJ9DePSH64ouj8cs52CZip7UfCbGBK98Nyg",
+      "token_slots": "180904610"
+    },
+    {
+      "owner": "5ioBGgmacF92sGF3Mw4dSBUAUYB5iXZi5PrdLtrJ6Yk4",
+      "token_slots": "381871540280"
+    },
+    {
+      "owner": "6DtdZ351EEcT6mczhyefB59PrymsmezLbRTJAunTwiWn",
+      "token_slots": "2794178294840"
+    },
+    {
+      "owner": "6Jtc91o51YXUzezsC8ZLaqYYfh3aPWJQBvfzwYea7jUo",
+      "token_slots": "49482223166267"
+    },
+    {
+      "owner": "6WJfN1fqrEEMSVKnzZkR4vJTMTxBaqvka2KA7aQHJMfF",
+      "token_slots": "52670"
+    },
+    {
+      "owner": "6dFggcCvogHVXXZL41e1adj6uXFtJTbmkAFQSL9MYixZ",
+      "token_slots": "21113080980"
+    },
+    {
+      "owner": "7Eow5GYXX6oDVhHBhCYc26mDmuqcHyZK9jzLTFZC3wqi",
+      "token_slots": "8203421034930"
+    },
+    {
+      "owner": "7PF9vPtQzDcDKN6LpHKP3M397r6wnQ4WqMLVP1SXrgnH",
+      "token_slots": "200390858620"
+    },
+    {
+      "owner": "8KWEBTiqddd822kmxcaLD2Bupt7N7esaWz4H7GrBU6kR",
+      "token_slots": "284065947130"
+    },
+    {
+      "owner": "8psNvWTrdNTiVRNzAgsou9kETXNJm2SXZyaKuJraVRtf",
+      "token_slots": "414868187140"
+    },
+    {
+      "owner": "A3Go4vP3WHWF23S747uZG9mSMAqLVGRYQvA2tieShRHu",
+      "token_slots": "29180"
+    },
+    {
+      "owner": "AiJncJexFGbpTa3y8jkuzVLXUMuAyf88VZYPmUqz42ue",
+      "token_slots": "10545601333576"
+    },
+    {
+      "owner": "B3HQRViPGZzrF8Dhmpky2Bs7aGavyaq76W88Ar28h18U",
+      "token_slots": "14561400474"
+    },
+    {
+      "owner": "BTyfWWYf8sWLUDEVUevzDqDEqbAKE3u3K31AD6732hRB",
+      "token_slots": "95858339790"
+    },
+    {
+      "owner": "BqE7F2hatZqWfbz5mjNnQsm2sTbYmGwHHhS31h7kdALR",
+      "token_slots": "485511856460"
+    },
+    {
+      "owner": "ChAhnUiPC9xd2MDTGyVffehqAMF7TEnnCCXNmpEGo6CJ",
+      "token_slots": "268552449640"
+    },
+    {
+      "owner": "CpZLVv63mUSRruto9RtciDumV3GAahUJrbDffRokTvUU",
+      "token_slots": "16960608707250"
+    },
+    {
+      "owner": "D93hBBFx39pEBxdAR3AzRsiZsN2J1pJk9W6PuXxADw5v",
+      "token_slots": "51119213568985"
+    },
+    {
+      "owner": "DnD9N2D2Qkd5D18UFxAA2U9ptuoWVYLSMEFGrFiCRCAs",
+      "token_slots": "860117724080"
+    },
+    {
+      "owner": "FfAJbv3prDQUybTNkS3EGaoSbkkbSLy1Eahe5MMxMG9t",
+      "token_slots": "1805406890"
+    },
+    {
+      "owner": "FireuLYd4yjJBhXQyBs3Mq6ZpNEjyHPNPG2eqhTP9RHV",
+      "token_slots": "757909230"
+    },
+    {
+      "owner": "GZBidcjjhhqUEK1qheMQjPpea48cRJT7pUCbaHq3mUWe",
+      "token_slots": "45602696720"
+    },
+    {
+      "owner": "HMx8Sc7NdAjaytPNB6JiyhqwaGxSbbAjgKiUT7ebFRu3",
+      "token_slots": "611759434330"
+    },
+    {
+      "owner": "HgpbxqtHN8uuntiPsmpMGzJUhYLFfpC1H24M5phdYomL",
+      "token_slots": "628068866962288"
+    }
+  ],
+  "ledger_hash": "62561bd974db4491caa330b89e908bdd618b3576f4b930a0ff369bb820de634b",
+  "manifest_hash": "c630e604e2898b74c246c2b5b3a76b7ee7e8e05148131d807f829889a594e418",
+  "merkle_root": "f99e2ca9e68b9aee11c73a8e8d07b82b297acb2e6750d5bf50cae3210198383c",
+  "params": {
+    "commitment": "finalized",
+    "config_pubkey": "11111111111111111111111111111111",
+    "exclusions_hash": "17fb09ec568e4ee1f3bce9cddbd22557335766e290f87596d4c257495645af2f",
+    "exclusions_version": "demo-2026-08-08.1",
+    "from_slot": 437990510,
+    "mint": "F1XdReoHL3GweeCG4sgoZGAdsUNt8sda8n5EE2TNpump",
+    "opening_state": {
+      "accounts": 39,
+      "hash": "f3dd41fcc33241d1a8912d984cf1c41894d0402948014f0e00d71c6d63449499",
+      "mode": "chained",
+      "source": "artifacts/demo.F1XdReoHL3GweeCG4sgoZGAdsUNt8sda8n5EE2TNpump.437990500-437990510.json (closing_state_hash f3dd41fcc33241d1a8912d984cf1c41894d0402948014f0e00d71c6d63449499)"
+    },
+    "prior_root_source": null,
+    "range_convention": "[from_slot, to_slot) — half-open, start inclusive, end exclusive",
+    "schema": "escapement.artifact/v1",
+    "to_slot": 437990520,
+    "vault_lamports": "1000000000",
+    "vault_lamports_source": "hypothetical"
+  },
+  "payouts": [
+    {
+      "cumulative_lamports": "1192799",
+      "owner": "13WXDkCej41Dudkk1nxsPrKoWgAieJZ1tLJGLw8qfxfA",
+      "payout_lamports": "1192799",
+      "token_slots": "934444239470"
+    },
+    {
+      "cumulative_lamports": "7919700",
+      "owner": "kEFiAX3jo5NmemysQov342TZ9mGh6yp92GDRjhA8XDf",
+      "payout_lamports": "7919700",
+      "token_slots": "6204327901450"
+    },
+    {
+      "cumulative_lamports": "1536216",
+      "owner": "vZ8dd5wVgn3y7ysRxaCtWa3muJVtF6c79D1DJY4a5gb",
+      "payout_lamports": "1536216",
+      "token_slots": "1203479069520"
+    },
+    {
+      "cumulative_lamports": "91",
+      "owner": "26XchA9wjMv8CCEX6ugnzaoYi7DYfVdR97nc9zyZx2Uz",
+      "payout_lamports": "91",
+      "token_slots": "71653830"
+    },
+    {
+      "cumulative_lamports": "5344377",
+      "owner": "2tgUbS9UMoQD6GkDZBiqKYCURnGrSb6ocYwRABrSJUvY",
+      "payout_lamports": "5344377",
+      "token_slots": "4186808788720"
+    },
+    {
+      "cumulative_lamports": "18052",
+      "owner": "4BQ6ATUt26GFdiYQfht23iwfKyYD9D7XbL5ATqNGk3xK",
+      "payout_lamports": "18052",
+      "token_slots": "14142232060"
+    },
+    {
+      "cumulative_lamports": "230",
+      "owner": "4YP7YJFDpjJ9DePSH64ouj8cs52CZip7UfCbGBK98Nyg",
+      "payout_lamports": "230",
+      "token_slots": "180904610"
+    },
+    {
+      "cumulative_lamports": "487451",
+      "owner": "5ioBGgmacF92sGF3Mw4dSBUAUYB5iXZi5PrdLtrJ6Yk4",
+      "payout_lamports": "487451",
+      "token_slots": "381871540280"
+    },
+    {
+      "cumulative_lamports": "3566712",
+      "owner": "6DtdZ351EEcT6mczhyefB59PrymsmezLbRTJAunTwiWn",
+      "payout_lamports": "3566712",
+      "token_slots": "2794178294840"
+    },
+    {
+      "cumulative_lamports": "63163064",
+      "owner": "6Jtc91o51YXUzezsC8ZLaqYYfh3aPWJQBvfzwYea7jUo",
+      "payout_lamports": "63163064",
+      "token_slots": "49482223166267"
+    },
+    {
+      "cumulative_lamports": "0",
+      "owner": "6WJfN1fqrEEMSVKnzZkR4vJTMTxBaqvka2KA7aQHJMfF",
+      "payout_lamports": "0",
+      "token_slots": "52670"
+    },
+    {
+      "cumulative_lamports": "26950",
+      "owner": "6dFggcCvogHVXXZL41e1adj6uXFtJTbmkAFQSL9MYixZ",
+      "payout_lamports": "26950",
+      "token_slots": "21113080980"
+    },
+    {
+      "cumulative_lamports": "10471502",
+      "owner": "7Eow5GYXX6oDVhHBhCYc26mDmuqcHyZK9jzLTFZC3wqi",
+      "payout_lamports": "10471502",
+      "token_slots": "8203421034930"
+    },
+    {
+      "cumulative_lamports": "255794",
+      "owner": "7PF9vPtQzDcDKN6LpHKP3M397r6wnQ4WqMLVP1SXrgnH",
+      "payout_lamports": "255794",
+      "token_slots": "200390858620"
+    },
+    {
+      "cumulative_lamports": "362604",
+      "owner": "8KWEBTiqddd822kmxcaLD2Bupt7N7esaWz4H7GrBU6kR",
+      "payout_lamports": "362604",
+      "token_slots": "284065947130"
+    },
+    {
+      "cumulative_lamports": "529570",
+      "owner": "8psNvWTrdNTiVRNzAgsou9kETXNJm2SXZyaKuJraVRtf",
+      "payout_lamports": "529570",
+      "token_slots": "414868187140"
+    },
+    {
+      "cumulative_lamports": "0",
+      "owner": "A3Go4vP3WHWF23S747uZG9mSMAqLVGRYQvA2tieShRHu",
+      "payout_lamports": "0",
+      "token_slots": "29180"
+    },
+    {
+      "cumulative_lamports": "13461248",
+      "owner": "AiJncJexFGbpTa3y8jkuzVLXUMuAyf88VZYPmUqz42ue",
+      "payout_lamports": "13461248",
+      "token_slots": "10545601333576"
+    },
+    {
+      "cumulative_lamports": "18587",
+      "owner": "B3HQRViPGZzrF8Dhmpky2Bs7aGavyaq76W88Ar28h18U",
+      "payout_lamports": "18587",
+      "token_slots": "14561400474"
+    },
+    {
+      "cumulative_lamports": "122361",
+      "owner": "BTyfWWYf8sWLUDEVUevzDqDEqbAKE3u3K31AD6732hRB",
+      "payout_lamports": "122361",
+      "token_slots": "95858339790"
+    },
+    {
+      "cumulative_lamports": "619746",
+      "owner": "BqE7F2hatZqWfbz5mjNnQsm2sTbYmGwHHhS31h7kdALR",
+      "payout_lamports": "619746",
+      "token_slots": "485511856460"
+    },
+    {
+      "cumulative_lamports": "342801",
+      "owner": "ChAhnUiPC9xd2MDTGyVffehqAMF7TEnnCCXNmpEGo6CJ",
+      "payout_lamports": "342801",
+      "token_slots": "268552449640"
+    },
+    {
+      "cumulative_lamports": "21649876",
+      "owner": "CpZLVv63mUSRruto9RtciDumV3GAahUJrbDffRokTvUU",
+      "payout_lamports": "21649876",
+      "token_slots": "16960608707250"
+    },
+    {
+      "cumulative_lamports": "65252650",
+      "owner": "D93hBBFx39pEBxdAR3AzRsiZsN2J1pJk9W6PuXxADw5v",
+      "payout_lamports": "65252650",
+      "token_slots": "51119213568985"
+    },
+    {
+      "cumulative_lamports": "1097923",
+      "owner": "DnD9N2D2Qkd5D18UFxAA2U9ptuoWVYLSMEFGrFiCRCAs",
+      "payout_lamports": "1097923",
+      "token_slots": "860117724080"
+    },
+    {
+      "cumulative_lamports": "2304",
+      "owner": "FfAJbv3prDQUybTNkS3EGaoSbkkbSLy1Eahe5MMxMG9t",
+      "payout_lamports": "2304",
+      "token_slots": "1805406890"
+    },
+    {
+      "cumulative_lamports": "967",
+      "owner": "FireuLYd4yjJBhXQyBs3Mq6ZpNEjyHPNPG2eqhTP9RHV",
+      "payout_lamports": "967",
+      "token_slots": "757909230"
+    },
+    {
+      "cumulative_lamports": "58210",
+      "owner": "GZBidcjjhhqUEK1qheMQjPpea48cRJT7pUCbaHq3mUWe",
+      "payout_lamports": "58210",
+      "token_slots": "45602696720"
+    },
+    {
+      "cumulative_lamports": "780898",
+      "owner": "HMx8Sc7NdAjaytPNB6JiyhqwaGxSbbAjgKiUT7ebFRu3",
+      "payout_lamports": "780898",
+      "token_slots": "611759434330"
+    },
+    {
+      "cumulative_lamports": "801717303",
+      "owner": "HgpbxqtHN8uuntiPsmpMGzJUhYLFfpC1H24M5phdYomL",
+      "payout_lamports": "801717303",
+      "token_slots": "628068866962288"
+    }
+  ],
+  "produced_at": "2026-08-08T12:24:30.298Z",
+  "rpc_cost": {
+    "calls": 12,
+    "endpoint_host": "api.mainnet-beta.solana.com",
+    "response_bytes": 51389073,
+    "retries": 0,
+    "wall_ms": 3941
+  },
+  "schema": "escapement.artifact/v1",
+  "slots": {
+    "anchor_previous_blockhash": "6bVnYx1u53v356fD41DufhvLfRidABXfCMmrw8pGYiKT",
+    "continuity_verified": true,
+    "finalized_tip_at_run": 437992271,
+    "produced": 10,
+    "skipped": 0,
+    "skipped_slots": [],
+    "total": 10
+  },
+  "total_owed_cumulative": "999999986",
+  "transactions": {
+    "consumed": 405,
+    "failed_included_in_input_set": 140,
+    "net_supply_delta": "0",
+    "supply_changed": false
+  },
+  "warnings": []
+}

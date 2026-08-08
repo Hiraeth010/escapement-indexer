@@ -421,5 +421,11 @@ src/
   version.mjs       source hash, environment manifest
   *.test.mjs        79 tests, colocated, `node --test`
 exclusions/         exclusion sets. Versioned, hashed, diffable
-artifacts/          the demonstration run, committed
+artifacts/          the demonstration run, committed:
+                      *.json            the artifact
+                      *.input-set.txt   the D5 commitment, in diffable form
+                      verify-second-provider.log  the cross-provider check, as it ran
 ```
+
+All three artifacts were produced from commit `143631b` with a clean `src/`
+(`indexer_git_dirty: false` in each), so a reader checking out that commit runs the same bytes.
