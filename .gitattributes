@@ -1,0 +1,7 @@
+# The indexer source hash is computed over these bytes, so line endings must not
+# vary by platform. Without this, a Windows clone and a Linux clone report
+# different `indexer_source_hash` values for identical source.
+* text eol=lf
+*.json text eol=lf
+*.mjs text eol=lf
+*.md text eol=lf

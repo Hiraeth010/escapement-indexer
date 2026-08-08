@@ -1,0 +1,15 @@
+{
+  "name": "@escapement/indexer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic token-slot entitlement indexer for Escapement. Iterates finalized blocks, integrates balance over slots, and commits a merkle root a third party can recompute byte-for-byte.",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=22" },
+  "bin": { "escapement": "src/cli.mjs" },
+  "dependencies": {},
+  "scripts": {
+    "test": "node --test \"src/*.test.mjs\"",
+    "escapement": "node src/cli.mjs"
+  }
+}
