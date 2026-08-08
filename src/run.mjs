@@ -327,7 +327,15 @@ export async function runIndex({
       skipped_slots: range.skipped,
       anchor_previous_blockhash: range.anchorPreviousBlockhash,
       finalized_tip_at_run: range.finalizedTip,
-      continuity_verified: true,
+      // B4: the number of continuity links ACTUALLY checked, not a hardcoded
+      // `true`. Interior links plus the head and tail anchors when they exist.
+      // A run with one produced block and both anchors present verifies 2; a run
+      // that could anchor neither end verifies only its interior links and says
+      // so, so a reader can tell a proven-contiguous range from an asserted one.
+      continuity_links_checked: range.continuityLinks,
+      head_anchor_slot: range.headAnchorSlot,
+      tail_anchor_slot: range.tailAnchorSlot,
+      continuity_verified: range.continuityLinks >= Math.max(1, range.produced.length - 1),
     },
 
     transactions: {

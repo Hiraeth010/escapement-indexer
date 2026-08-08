@@ -424,7 +424,14 @@ Real, against mainnet public RPC, over a real mint. Committed in `artifacts/` so
 re-run it and get the same bytes.
 
 The mint is **an unaffiliated third-party pump.fun token**, chosen because it was active in the
-slot window. Escapement has no token; nothing of ours is deployed on any cluster.
+slot window. Escapement has no token of its own.
+
+> **Correction (2026-08-08, review finding B9).** An earlier version of this line read "nothing of ours is
+> deployed on any cluster." That was false: the vault program
+> `BBLABjcv74dbcoc3gSsKkSW5PyswweTJJChQxoc2VVbF` is deployed on **devnet** (with 184 landed program
+> transactions against the pre-fix build). The security-fix binary is not yet redeployed — that is gated on
+> deploy SOL — so the currently deployed devnet bytes are the pre-fix build; the fixed program's evidence is
+> the reproducible litesvm run in `onchain/tests-litesvm/`.
 
 | | |
 |---|---|

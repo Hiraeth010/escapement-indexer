@@ -22,8 +22,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runIndex, openingFromArtifact } from './run.mjs';
 import { accrue, ledgerFrom } from './accrue.mjs';
-import { UnresolvedSlotError, ChainBreakError, fetchRange } from './blocks.mjs';
-import { scenario, mockRpc, MINT, CONFIG, OPEN_EXCLUSIONS, A, B, OA, OB, OC } from './mockchain.test.mjs';
+import { UnresolvedSlotError, ChainBreakError, EmptyRangeError, fetchRange } from './blocks.mjs';
+import { scenario, mockChain, mockRpc, MINT, CONFIG, OPEN_EXCLUSIONS, A, B, OA, OB, OC } from './mockchain.test.mjs';
 
 const RUN = {
   mint: MINT, from: 100, to: 110,
@@ -121,7 +121,7 @@ test('3b. the failure is not merely reported — no artifact exists to publish',
   assert.equal(artifact, null, 'a partial index must not be reachable by a caller that ignores the error');
 });
 
-test('4. an RPC that hides a produced slot from getBlocks is caught by the hash chain', async () => {
+test('4. an RPC that hides a produced INTERIOR slot from getBlocks is caught by the hash chain', async () => {
   const chain = scenario();
   // slot 105 produced a block containing the transfer, but getBlocks omits it.
   // Believing getBlocks here would silently delete the transfer and produce a
@@ -134,6 +134,78 @@ test('4. an RPC that hides a produced slot from getBlocks is caught by the hash 
       return true;
     },
   );
+});
+
+// A chain WITH neighbours on both sides of the range, so the head and tail
+// anchors have something to anchor to. This is the production shape: periods are
+// chained from the mint's first slot, so every boundary but the very first has a
+// produced block on the other side of it (review finding B4).
+function neighbouredChain() {
+  return mockChain({
+    from: 96, to: 114, skipped: [],
+    txs: {
+      102: [{ sig: 'sigCreate', pre: [], post: [{ account: A, owner: OA, amount: 1000 }] }],
+      105: [{
+        sig: 'sigTransfer',
+        pre: [{ account: A, owner: OA, amount: 1000 }],
+        post: [{ account: A, owner: OA, amount: 600 }, { account: B, owner: OB, amount: 400 }],
+      }],
+    },
+  });
+}
+
+test('4a. B4: hiding the FIRST produced slot in range is caught by the head anchor', async () => {
+  const chain = neighbouredChain();
+  // Over [100, 110): slot 100 is the first produced slot. An RPC that omits it
+  // from getBlocks would drop it silently. The head anchor (last produced block
+  // before 100, i.e. slot 99) does not chain to the new first block, so it breaks.
+  await assert.rejects(
+    () => fetchRange({ rpc: mockRpc(chain, { hideFromGetBlocks: [100] }), from: 100, to: 110 }),
+    (err) => {
+      assert.ok(err instanceof ChainBreakError, `expected ChainBreakError, got ${err.name}: ${err.message}`);
+      return true;
+    },
+  );
+});
+
+test('4b. B4: hiding the LAST produced slot in range is caught by the tail anchor', async () => {
+  const chain = neighbouredChain();
+  // Over [100, 110): slot 109 is the last produced slot. The tail anchor (first
+  // produced block at or after 110, i.e. slot 110) chains back to 109, so if 109
+  // is dropped the anchor's previousBlockhash no longer matches the new last block.
+  await assert.rejects(
+    () => fetchRange({ rpc: mockRpc(chain, { hideFromGetBlocks: [109] }), from: 100, to: 110 }),
+    (err) => {
+      assert.ok(err instanceof ChainBreakError, `expected ChainBreakError, got ${err.name}: ${err.message}`);
+      return true;
+    },
+  );
+});
+
+test('4c. B4: an entirely empty getBlocks over a non-trivial range is refused, not believed', async () => {
+  // A chain whose in-range slots are all skipped from getBlocks. The old code
+  // emitted a clean artifact declaring all ten slots skipped with
+  // continuity_verified: true. Now it aborts.
+  const chain = mockChain({ from: 96, to: 114, skipped: [], txs: {} });
+  await assert.rejects(
+    () => fetchRange({
+      rpc: mockRpc(chain, { hideFromGetBlocks: [100, 101, 102, 103, 104, 105, 106, 107, 108, 109] }),
+      from: 100, to: 110,
+    }),
+    (err) => {
+      assert.ok(err instanceof EmptyRangeError, `expected EmptyRangeError, got ${err.name}`);
+      return true;
+    },
+  );
+});
+
+test('4d. B4: with neighbours present, both anchors are verified and counted', async () => {
+  const chain = neighbouredChain();
+  const range = await fetchRange({ rpc: mockRpc(chain), from: 100, to: 110 });
+  assert.equal(range.headAnchorSlot, 99, 'head anchor is the last produced slot before the range');
+  assert.equal(range.tailAnchorSlot, 110, 'tail anchor is the first produced slot at/after the range');
+  // 10 produced slots -> 9 interior links + 2 anchors = 11.
+  assert.equal(range.continuityLinks, range.produced.length - 1 + 2);
 });
 
 test('chaining two adjacent periods equals indexing the whole range at once', async () => {

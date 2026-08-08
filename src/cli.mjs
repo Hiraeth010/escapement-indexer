@@ -20,11 +20,13 @@ import { runVerify, hashInputSetText } from './verify.mjs';
 import { prettyCanonical } from './canonical.mjs';
 import { isPubkey } from './base58.mjs';
 import { environment } from './version.mjs';
+import { readVaultState, checkPot } from './pot.mjs';
 
 const USAGE = `escapement — deterministic token-slot entitlement indexer
 
   escapement index  --mint <pubkey> --from <slot> --to <slot> --exclusions <file> [options]
   escapement verify --root <hex> --mint <pubkey> --from <slot> --to <slot> --exclusions <file> [options]
+  escapement preflight --config <pubkey> --vault <pubkey> --total <lamports> [--rpc <url>]
   escapement exclusions-diff <before.json> <after.json>
   escapement exclusions-template [--mint <pubkey>] [--from <slot>]
   escapement env
@@ -243,9 +245,16 @@ async function cmdVerify(args) {
   const from = requireSlot(args.from ?? published?.params?.from_slot, 'from');
   const to = requireSlot(args.to ?? published?.params?.to_slot, 'to');
   const configPubkey = requirePubkey(args.config ?? published?.params?.config_pubkey, 'config');
+
+  // B7 — the pot is the one number a dishonest publisher would move, and the old
+  // code defaulted it to whatever the artifact declared, so a green AGREE proved
+  // nothing about it. Track its PROVENANCE: only a pot the verifier supplied
+  // independently (or derived from chain via --vault) makes the AGREE cover it.
+  const potFromOperator = args['vault-lamports'] !== undefined && args['vault-lamports'] !== null;
   const vaultRaw = args['vault-lamports'] ?? published?.params?.vault_lamports;
   if (vaultRaw === undefined || vaultRaw === null) throw new Error('--vault-lamports is required (or supply --artifact)');
   const vaultLamports = BigInt(vaultRaw);
+  const potProvenance = potFromOperator ? 'operator-supplied' : 'read-from-artifact-under-review';
 
   const exclusions = loadExclusions(args.exclusions, { mint, fromSlot: from });
   if (published && published.params?.exclusions_hash && published.params.exclusions_hash !== exclusions.hash) {
@@ -296,16 +305,67 @@ async function cmdVerify(args) {
     onProgress: progressBar(args.quiet),
   });
 
-  process.stdout.write(`\n${res.agree ? 'AGREE' : 'DISAGREE'}\n\n`);
+  process.stdout.write(`\n${res.agree ? 'AGREE' : 'DISAGREE'}${potProvenance === 'read-from-artifact-under-review' ? ' (POT-AGNOSTIC)' : ''}\n\n`);
   for (const f of res.findings) {
     process.stdout.write(`  [${f.level}] ${f.where}\n    ${f.detail.replace(/\n/g, '\n    ')}\n`);
+  }
+
+  // B7 — say plainly what the AGREE does and does not cover for the pot.
+  if (potProvenance === 'read-from-artifact-under-review') {
+    process.stdout.write(
+      `\n  [POT-AGNOSTIC] vault_lamports (${vaultLamports}) was read from the artifact under review,\n` +
+      `    not supplied independently. This AGREE proves the root is consistent with THAT pot; it does\n` +
+      `    NOT prove the pot is what the vault actually held. A publisher who under-declared the pot\n` +
+      `    strands holders' money and still gets AGREE here. To close this, re-run with an independently\n` +
+      `    sourced --vault-lamports, or run \`escapement preflight\` against chain state.\n`,
+    );
+  } else {
+    process.stdout.write(`\n  [pot] vault_lamports ${vaultLamports} was operator-supplied, so this AGREE covers it.\n`);
   }
   process.stdout.write(
     `\n  Verification shares the fetch, decode and accrual code with the producer.\n` +
     `  A bug in that shared code passes this check. See README, "What verification actually proves".\n`,
   );
   if (args.out) writeArtifact(resolve(args.out), res.artifact, { text: () => '' });
-  return res.agree && res.internallyConsistent ? 0 : 1;
+  // A pot-agnostic AGREE is not a full pass: exit non-zero so a CI gate cannot
+  // treat it as one.
+  const potOk = potProvenance !== 'read-from-artifact-under-review';
+  return res.agree && res.internallyConsistent && potOk ? 0 : 1;
+}
+
+/**
+ * B7 — the publish preflight. Reads the vault balance and the on-chain Config
+ * from chain, derives the maximum legal `total_owed_cumulative`, and refuses a
+ * proposed total that the program would reject or that would strand money.
+ *
+ *   escapement preflight --config <pubkey> --vault <pubkey> --total <lamports> --rpc <url>
+ *
+ * Reads only. Signs nothing, sends nothing.
+ */
+async function cmdPreflight(args) {
+  const configPubkey = requirePubkey(args.config, 'config');
+  const vaultPubkey = requirePubkey(args.vault, 'vault');
+  if (args.total === undefined) throw new Error('--total <lamports> is required (the proposed total_owed_cumulative)');
+  const proposed = BigInt(args.total);
+
+  const rpc = makeRpc(args);
+  const state = await readVaultState(rpc, configPubkey, vaultPubkey);
+  const verdict = checkPot(proposed, state);
+
+  process.stdout.write(
+    `escapement preflight\n` +
+    `  config            ${configPubkey}\n` +
+    `  vault             ${vaultPubkey}\n` +
+    `  vault balance     ${state.vaultLamports} (rent-exempt min ${state.rentMin})\n` +
+    `  total_claimed     ${state.totalClaimed}\n` +
+    `  high_water        ${state.highWater}\n` +
+    `  funded (derived)  ${verdict.funded}\n` +
+    `  max delta (G2)    ${verdict.maxDelta}\n` +
+    `  MAX LEGAL TOTAL   ${verdict.maxTotal}\n` +
+    `  proposed total    ${proposed}\n\n` +
+    `  ${verdict.ok ? 'OK' : `REFUSED (${verdict.reason})`} — ${verdict.detail}\n`,
+  );
+  return verdict.ok ? 0 : 1;
 }
 
 function cmdExclusionsDiff(args) {
@@ -360,6 +420,7 @@ export async function main(argv) {
   switch (cmd) {
     case 'index': return await cmdIndex(args);
     case 'verify': return await cmdVerify(args);
+    case 'preflight': return await cmdPreflight(args);
     case 'exclusions-diff': return cmdExclusionsDiff(args);
     case 'exclusions-template':
       process.stdout.write(exclusionsTemplate(args.mint ?? '<mint pubkey>', args.from ? Number(args.from) : 0));

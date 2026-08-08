@@ -188,4 +188,21 @@ export class Rpc {
   async getVersion() {
     try { return await this.call('getVersion', []); } catch { return null; }
   }
+
+  /**
+   * A single account, base64-encoded, at finalized commitment. Read-only.
+   *
+   * Added for the B7 pot preflight: a verifier reads the vault balance and the
+   * on-chain Config directly instead of trusting the artifact's declared pot.
+   * This method cannot move a lamport; it is a read.
+   */
+  async getAccountInfo(pubkey) {
+    return await this.call('getAccountInfo', [pubkey, { commitment: 'finalized', encoding: 'base64' }])
+      .then((r) => r?.value ?? null);
+  }
+
+  /** Rent-exempt minimum for a data length. Read-only. */
+  async getMinimumBalanceForRentExemption(dataLen) {
+    return await this.call('getMinimumBalanceForRentExemption', [dataLen, { commitment: 'finalized' }]);
+  }
 }
