@@ -90,18 +90,26 @@ the mint address and creator fee address stop being `null`. During the interval
 between a record changing and the next memo landing, **the live record will not
 match the newest memo listed above, and that is not evidence of compromise.**
 
-It is also not something we ask you to take on trust. Run:
+You can check that yourself with the commands below — nothing here asks you to
+take our word for it.
 
-```
-node launch/verify-canonical.mjs \
-  --site https://site-seven-tan-44.vercel.app \
-  --rpc  https://api.mainnet-beta.solana.com \
-  --expect-signer 25gkHLxJGxUfqtrhrMUQYfBML2MHh6pL4RcxQbVjkotS
-```
+> **Corrected 2026-08-09.** This section previously told you to run
+> `node launch/verify-canonical.mjs`. **That script is not published anywhere you
+> can get it.** It lives in a private repository, so the instruction was
+> unrunnable by every single person who might have wanted to use it — a
+> verification step in a security document that no reader can execute is worse
+> than no step, because it looks like an answer. It was found by an outside
+> reviewer trying to follow it. The manual commands below have always worked and
+> are now the primary path. Publishing a dependency-free version of the script
+> is tracked and not yet done.
 
-It fails closed on a mismatch, and the project's own abort criterion **A8**
-blocks the launch while it does. A record that has drifted from its memo cannot
-be launched through.
+**One more thing that script does and the manual check cannot:** it enumerates
+the signer's own transaction history and fails if the chain holds a memo this
+list omits. Without that, an attacker who controlled the origin could serve an
+*older* attested record together with a truncated list, and every hash would
+still match. If you are checking by hand, the equivalent is to look at the
+signer's account on any explorer and confirm the newest memo it has ever written
+is the one at the top of the table above.
 
 ---
 
