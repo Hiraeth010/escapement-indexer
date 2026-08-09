@@ -9,7 +9,7 @@ never a keypair path, never a private key.
 
 ```bash
 git clone <repo> && cd indexer
-node --test "src/*.test.mjs"     # 113 tests, no install step, no dependencies
+node --test "src/*.test.mjs"     # 124 tests, no install step, no dependencies
 
 node src/cli.mjs index  --mint <pubkey> --from <slot> --to <slot> --exclusions <file>
 node src/cli.mjs verify --root <hex>    --artifact <file> --exclusions <file> --rpc <a different provider>
@@ -114,7 +114,7 @@ which are committed here.
 # 1. Clone, and run the tests. There is no install step.
 git clone <repo> && cd indexer
 node --version                        # must be >= 22
-node --test "src/*.test.mjs"          # expect: pass 113, fail 0
+node --test "src/*.test.mjs"          # expect: pass 124, fail 0
 
 # 2. Recompute the demonstration root from a provider we did not use.
 node src/cli.mjs verify \
@@ -644,7 +644,7 @@ src/
   canonical.mjs     one serialisation; refuses floats and undefined
   base58.mjs        no dependencies
   version.mjs       source hash, environment manifest
-  *.test.mjs        113 tests, colocated, `node --test`
+  *.test.mjs        124 tests, colocated, `node --test`
 exclusions/         policy documents. Versioned, hashed, diffable
 artifacts/          the demonstration run, committed:
                       *.json            the artifact
