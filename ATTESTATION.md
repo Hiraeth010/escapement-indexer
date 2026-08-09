@@ -93,23 +93,39 @@ match the newest memo listed above, and that is not evidence of compromise.**
 You can check that yourself with the commands below — nothing here asks you to
 take our word for it.
 
-> **Corrected 2026-08-09.** This section previously told you to run
-> `node launch/verify-canonical.mjs`. **That script is not published anywhere you
-> can get it.** It lives in a private repository, so the instruction was
-> unrunnable by every single person who might have wanted to use it — a
-> verification step in a security document that no reader can execute is worse
-> than no step, because it looks like an answer. It was found by an outside
-> reviewer trying to follow it. The manual commands below have always worked and
-> are now the primary path. Publishing a dependency-free version of the script
-> is tracked and not yet done.
+### The script, which is in this repository
 
-**One more thing that script does and the manual check cannot:** it enumerates
-the signer's own transaction history and fails if the chain holds a memo this
-list omits. Without that, an attacker who controlled the origin could serve an
-*older* attested record together with a truncated list, and every hash would
-still match. If you are checking by hand, the equivalent is to look at the
+```
+node verify/verify-canonical.mjs \
+  --site https://site-seven-tan-44.vercel.app \
+  --rpc  https://api.mainnet-beta.solana.com \
+  --expect-signer 25gkHLxJGxUfqtrhrMUQYfBML2MHh6pL4RcxQbVjkotS
+```
+
+**No install, no dependencies.** It needs Node and nothing else — the same rule
+as the rest of this repository. Copy `verify/` anywhere and run it; there is no
+`node_modules` to fetch and nothing to trust beyond Node itself and the public
+RPC you point it at.
+
+> **History, because it matters more than the fix.** This section previously told
+> you to run this script while it lived only in a private repository — a
+> verification instruction that no reader on earth could execute, which is worse
+> than no instruction, because it looks like an answer. An outside reviewer found
+> it by trying to follow it. Publishing it was blocked by one thing: it imported
+> a Solana library, and this repository has zero dependencies. The library went
+> instead of the property.
+
+**What the script does that the manual check cannot:** it enumerates the signer's
+own transaction history and **fails if the chain holds a memo this list omits.**
+Without that, an attacker who controlled the origin could serve an *older*
+attested record alongside a truncated list, and every hash would still match —
+a silent rollback. If you are checking by hand, the equivalent is to open the
 signer's account on any explorer and confirm the newest memo it has ever written
 is the one at the top of the table above.
+
+It exits non-zero on any failure, so it is safe to put in a cron job or a CI
+step if you want to be told when this project's own record stops matching its
+own chain.
 
 ---
 
