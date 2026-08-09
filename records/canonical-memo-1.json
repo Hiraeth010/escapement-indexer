@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "updated": "2026-08-08",
+  "origin": "https://site-seven-tan-44.vercel.app",
+  "intendedApexDomain": {
+    "domain": "escapement.so",
+    "resolves": false,
+    "weControlIt": false,
+    "observedOn": "2026-08-08",
+    "method": "nslookup returned NXDOMAIN (no DNS record). That is evidence it does not serve anything; it is not registry data, so it is not proof of who does or does not hold the registration."
+  },
+  "rule": "If a link, address, or account is not listed on this page, it is not ours. There are no exceptions, and we will never make one.",
+  "status": "Not yet minted. Any address claiming to be $ESCAPEMENT before this page lists a mint address is fraudulent.",
+  "addresses": [
+    {
+      "label": "$ESCAPEMENT mint",
+      "address": null,
+      "note": "Not yet minted. Any address claiming to be $ESCAPEMENT before this page lists a mint address is fraudulent.",
+      "addedOn": null
+    },
+    {
+      "label": "Launch and dev-buy wallet",
+      "address": "25gkHLxJGxUfqtrhrMUQYfBML2MHh6pL4RcxQbVjkotS",
+      "note": "The only wallet that will ever buy the token on our behalf, published before launch so that no purchase from it can be presented later as a hidden bundle. You never send anything to this address.",
+      "addedOn": "2026-08-08"
+    },
+    {
+      "label": "Distribution (vault) program id",
+      "address": "BBLABjcv74dbcoc3gSsKkSW5PyswweTJJChQxoc2VVbF",
+      "note": "NOT DEPLOYED on mainnet. It failed three independent security reviews and was removed from the launch. Creator fees will accrue at a program-derived address under this id that nobody can sign for, including us. You never send anything to this address, and there is nothing to claim from it.",
+      "addedOn": "2026-08-08"
+    },
+    {
+      "label": "Creator fee address",
+      "address": null,
+      "note": "Derived from the mint, so it does not exist until the token does. It will be published here with the mint address and the launch signature.",
+      "addedOn": null
+    },
+    {
+      "label": "Retired devnet hook program",
+      "address": "HpMQBYB3kvBS9ouHnw6zsmz72ZXHSYFa6YvRzuDrnAvL",
+      "note": "Abandoned architecture, devnet only, listed so that finding it is not a discovery. It is not part of this project and must not be used.",
+      "addedOn": "2026-08-08"
+    }
+  ],
+  "channels": [
+    {
+      "label": "Website",
+      "value": "https://site-seven-tan-44.vercel.app",
+      "note": "Served from a Vercel hostname. The apex domain escapement.so is NOT registered and does not resolve. Until it does, there is no short memorable domain rule, and anyone telling you there is one is guessing."
+    },
+    {
+      "label": "X / Twitter",
+      "value": null,
+      "note": "No account exists yet. Every account currently using this name is not us."
+    },
+    {
+      "label": "Discord",
+      "value": null,
+      "note": "We do not run a Discord. Any \"official Escapement Discord\" is fraudulent."
+    },
+    {
+      "label": "Telegram",
+      "value": null,
+      "note": "We do not run a Telegram group."
+    },
+    {
+      "label": "Source — indexer",
+      "value": "https://github.com/Hiraeth010/escapement-indexer",
+      "note": "Apache-2.0, branch main. The deterministic indexer, its tests and the committed demonstration artifacts. Any other repository claiming to be this one is not ours."
+    },
+    {
+      "label": "Source — hook census",
+      "value": "https://github.com/Hiraeth010/token2022-hook-census",
+      "note": "Apache-2.0, branch main. The Token-2022 transfer-hook dataset, its method and its scanner."
+    },
+    {
+      "label": "npm / crates",
+      "value": null,
+      "note": "Nothing published. Any package using this name is not ours."
+    }
+  ],
+  "willNever": [
+    "DM you first. On X, Discord, Telegram, or anywhere. Including a reply in a thread you started.",
+    "Ask for your seed phrase, private key, or keystore file. Not for support, not for a migration, not for a whitelist, not to verify anything.",
+    "Ask you to connect your wallet to claim, verify, unlock, migrate, or fix anything.",
+    "Run a claim, an airdrop, or a distribution. There is no claim page, no claim program deployed, and no claim of any kind. Any page offering to distribute $ESCAPEMENT to you is fraudulent, without exception.",
+    "Run a presale, whitelist, private round, or allocation. The token launches on pump.fun with no allocation to us beyond a dev buy from the wallet published above.",
+    "Announce a migration, a V2 token, or a contract fix requiring you to swap tokens.",
+    "Ask you to send SOL or any token to any address, for any reason.",
+    "Publish a new contract address. There is exactly one launch and one mint. If an address changes, we have been compromised — and the on-chain memo chain will disagree with the new claim.",
+    "Run a giveaway that requires a transaction.",
+    "Offer private support. There is no support DM, no ticket bot, no support agent. Every support request is answered in public or not at all.",
+    "Contact you about unclaimed rewards, a failed transaction, or an account issue.",
+    "Ask you to install software, join a call to debug, or download a file."
+  ],
+  "notEvidence": [
+    "A matching name, symbol, or image. All three are free to copy and none are unique.",
+    "A Solscan, Dexscreener or Birdeye listing. Every token has one, including every scam.",
+    "Liquidity, volume, or holder count. All purchasable.",
+    "A verified checkmark on any social platform. Paid checkmarks verify a payment, not an identity.",
+    "Being first in search results. Ads outrank truth."
+  ],
+  "memoChainUrl": "/canonical-memos.json",
+  "memoChainNote": "The memo chain is served separately and is NOT part of this document, because a document cannot contain the hash of itself. This document changes only when the record changes; each change is attested by the next memo.",
+  "disclosure": "Creator fees accrue at an address no one can sign for. The program that would distribute them has failed three independent security reviews and is not deployed. If it never passes, these fees are permanently unclaimable by anyone, including us. The reviews are published."
+}
