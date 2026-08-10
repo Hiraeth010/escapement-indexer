@@ -55,14 +55,20 @@ that is not listed here, treat it as hostile until we have explained it.
 | 1 | `i8s8PjdhgmrN2jnPcc8hx6z37eNshkckQyK5pGpvfxYtLCBbUQM7KBEj8F1TjyJY5BHEuq2U6kyuYaRfMnZaT1W` | `06d2b97abfc5298b2d9e1e6b5932402b5da155f6b8856e7af09e6242bdaf10d5` | 6,210 | 438,247,595 | 2026-08-09 |
 | 2 | `EoizfE2h3t5egmd97CBsLfdWcpQkM5r3LvgKfmHNFgncPe6y7YVfpTd8sSSKgxJTpugvi7pvUhcAjzaG4wh5qvc` | `f3aea8abf3c2c421a0b34287ae5c2a62c612f84aaefb8a9f825fc7da9d068586` | 7,563 | 438,263,705 | 2026-08-09 |
 | 3 | `5CJznP7o3itepfjVfi3idyjV8cK1DSMU3MfK82M95AxKq1ZHDaGYG8XKJJyLsfb63k8Y9mejyNiHdvfTtAwhAcb3` | `494d4c5996104c7827e30911284c272b199668c247361e8e033e8a5618d21b8e` | 9,829 | 438,325,103 | 2026-08-10 |
+| 4 | `5vwVYf8oEVYuvxMC1uk1ythAKFW4gWfKqSgBUDyNAH3iPE1ty1c7DbNq6A3bqdW4VDLwWXq6QYaZZ98oWdTHRBmj` | `9ac78cac968ef2691ecbde230ab64ce03181c6fb9872e48d0200445c379deef5` | 10,597 | 438,330,923 | 2026-08-10 |
 
-**Memo #3 is the newest one that has landed**, and its `prev` field names memo
-#2, which names memo #1, so the chain is checkable link by link without trusting
-this table.
+**Memo #4 is the newest one that has landed**, and its `prev` field names memo
+#3, which names #2, which names #1, so the chain is checkable link by link
+without trusting this table.
 
-**It commits the record being served**, as of 2026-08-10: 9,829 bytes hashing to
-`494d4c5996104c7827e30911284c272b199668c247361e8e033e8a5618d21b8e`.
+**It commits the record being served**, as of 2026-08-10: 10,597 bytes hashing to
+`9ac78cac968ef2691ecbde230ab64ce03181c6fb9872e48d0200445c379deef5`.
 `verify-canonical.mjs` returns CLEAR, exit 0, on all fourteen checks.
+
+**Memo #4 is the first one committed after the token existed.** It attests the
+record that names the mint — which is the record an impersonator most wants to
+contradict, and the reason the gap between deploying it and attesting it was
+measured in minutes rather than left to a convenient moment.
 
 That sentence is load-bearing and it has been wrong before. It used to read "Memo
 #2 is the current one. It commits the record being served now" while the origin
