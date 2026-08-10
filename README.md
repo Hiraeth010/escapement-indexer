@@ -21,6 +21,53 @@ report it so that it is actionable in one pass.
 
 ---
 
+## What it costs to run
+
+```
+node src/cli.mjs cost --from <slot> --to <slot>
+```
+
+Block data is **~11.6 MB per slot**, paid on every slot in the range.
+
+| slots | of chain | block data | fetch @2/s | free public RPC? |
+|---|---|---|---|---|
+| 100 | 40 s | 1.1 GB | 1 min | yes |
+| 1,000 | 7 min | 11.3 GB | 8 min | yes |
+| 20,000 | 2.2 h | 226.6 GB | 2.8 h | no |
+| 216,000 (1 day) | 1 day | **2.4 TB** | 30 h | no |
+
+There is no configuration in which a day of chain is a free operation. This is
+printed by the tool before a run starts, because the only other way to discover
+that wall is to run into it after several hours.
+
+Cost also scales with the token's **age**, not with the period you care about:
+there is no way to ask a public RPC for historical account state, so a range that
+does not begin at the mint's first slot needs an opening balance table from
+somewhere — see the note in `src/run.mjs`.
+
+## Getting a holder weighting out
+
+```
+node src/cli.mjs index --mint <pubkey> --from <slot> --to <slot> \
+  --exclusions policy.json --csv holders.csv
+```
+
+```
+owner,token_slots,share_of_total
+<pubkey>,793100000000000,0.793100000000
+```
+
+Time-weighted holdings, ordered largest first. That is the input an airdrop
+weighting wants, and using it does **not** require adopting this project's
+distribution mechanism, its merkle leaf format, or its config PDA — pass no
+`--config` and no merkle root is computed at all.
+
+The rows reflect the exclusions *you* supply. If your policy excludes nothing,
+the AMM pool is very likely the first line: on one real distribution it was 85%
+of the total, held at an address no keypair can sign for. That is a fact about
+the token, not a bug in the measurement, and it is why `--exclusions` is required
+and never defaulted.
+
 ## Why this exists
 
 Escapement's entire trust model is one sentence: *the indexer is open source and you can recompute
