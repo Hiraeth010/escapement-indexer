@@ -76,6 +76,16 @@ const isBase58Address = (s) => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s);
 const MEMO_PROGRAM = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
 
 /**
+ * The envelope that makes a memo OURS. One constant, used by both readers.
+ *
+ * It was written out twice — the harvester required it, the newest-memo parser
+ * did not — and that divergence was an exploitable fail-open: two halves of this
+ * script disagreeing about what a single transaction says. A string duplicated
+ * between two readers of the same bytes is a drift waiting to be found.
+ */
+const MEMO_ENVELOPE = 'escapement canonical v1';
+
+/**
  * How long the record must be attested before launch.
  *
  * CHANGED 2026-08-09 from 14 days to 0, by founder decision, and the reasoning
@@ -202,7 +212,44 @@ try {
   if (e instanceof Refused) throw e;
   refuse(`could not fetch ${memoUrl} — ${e.message}`);
 }
-const list = Array.isArray(memos) ? memos : (memos.memos ?? []);
+/**
+ * The origin under audit chooses these bytes, so its shape is validated before
+ * anything reads a property off it.
+ *
+ * `Array.isArray(memos) ? memos : (memos.memos ?? [])` threw a TypeError on a
+ * served JSON `null`, and the resulting unhandled rejection made Node abort with
+ * 0xC0000409 (3221226505) — the exact Windows abort code the two long comments
+ * in this file exist to eliminate, reached this time through hostile input
+ * rather than through process.exit(). A blind review triggered it remotely.
+ *
+ * ATTESTATION.md tells strangers this script "exits non-zero on any failure, so
+ * it is safe to put in a cron job". An adversary who can serve this endpoint
+ * could make it exit with a crash code and a Node stack trace instead of 1 or 2
+ * — which this project's own prose says an operator reads as broken tooling and
+ * routes around. Refusing is the correct outcome, and it is a REFUSE rather than
+ * a FAIL because a malformed document means the checks never ran.
+ */
+const rawList = Array.isArray(memos) ? memos : (memos && typeof memos === 'object' ? memos.memos : undefined);
+if (!Array.isArray(rawList)) {
+  refuse(
+    `${memoUrl} is not a memo list — got ${memos === null ? 'null' : Array.isArray(memos) ? 'an array' : typeof memos}.`,
+    'It must be a JSON array, or an object with a "memos" array. The origin being audited controls '
+    + 'this document, so a shape it chooses must never decide whether this script runs to completion.',
+  );
+}
+for (const [i, m] of rawList.entries()) {
+  if (!m || typeof m !== 'object' || Array.isArray(m)) {
+    refuse(`${memoUrl} entry ${i} is not an object.`);
+  }
+  if (!Number.isInteger(m.n) || m.n < 1) {
+    refuse(`${memoUrl} entry ${i} has memo number ${JSON.stringify(m.n)}, which is not a positive integer.`,
+      'A string or float here would compare and sort in ways that quietly change which memo is "newest".');
+  }
+  if (typeof m.signature !== 'string' || m.signature.length === 0) {
+    refuse(`${memoUrl} entry ${i} (memo #${m.n}) has no signature string.`);
+  }
+}
+const list = rawList;
 
 // @enforces A8 canonical-record-has-at-least-one-memo
 check(list.length > 0, 'the memo chain is not empty',
@@ -235,15 +282,53 @@ const keys = (msg.staticAccountKeys ?? msg.accountKeys ?? []).map((k) => (k.toBa
 check(keys[0] === expectSigner, 'the memo was signed by the wallet the site publishes',
   `fee payer ${keys[0]}`);
 
-// Pull the memo text out of the instruction data rather than out of the logs:
-// logs are truncated by some RPCs, instruction data is not.
-let memoText = null;
+/**
+ * Pull the memo text out of the instruction data rather than out of the logs:
+ * logs are truncated by some RPCs, instruction data is not.
+ *
+ * FILTERED BY ENVELOPE, AND AMBIGUITY IS A REFUSAL.
+ *
+ * The first version kept assigning `memoText` inside the loop, so the LAST memo
+ * instruction in the transaction won, and it applied no envelope filter — while
+ * the harvester forty lines below required `escapement canonical v1`. Two halves
+ * of one script disagreeing about what the same transaction says.
+ *
+ * A blind review exploited it: one honest memo plus a trailing memo instruction
+ * of the attacker's choosing, in the same transaction, produced
+ * VERIFY-CANONICAL CLEAR against attacker-chosen bytes. A human reading that
+ * transaction on an explorer sees the honest memo first.
+ *
+ * It also false-alarmed in the benign direction — an honest memo plus an
+ * unrelated "gm" memo in the same transaction made `committedHash` null and
+ * declared the site unattested.
+ *
+ * So: consider only instructions carrying our envelope, and if a single
+ * transaction carries more than one of those, REFUSE. Picking either would be
+ * choosing which of two contradictory attestations to believe, and this script
+ * exists precisely so nobody has to guess that.
+ */
+const memoTexts = [];
 for (const ix of msg.compiledInstructions ?? msg.instructions ?? []) {
   const pid = keys[ix.programIdIndex];
   if (pid !== MEMO_PROGRAM) continue;
   const data = ix.data;
-  memoText = Buffer.from(typeof data === 'string' ? bs58Decode(data) : data).toString('utf8');
+  let text;
+  try {
+    text = Buffer.from(typeof data === 'string' ? bs58Decode(data) : data).toString('utf8');
+  } catch {
+    continue; // undecodable instruction data is not our envelope
+  }
+  if (!text.startsWith(MEMO_ENVELOPE)) continue;
+  memoTexts.push(text);
 }
+if (memoTexts.length > 1) {
+  refuse(
+    `${newest.signature} carries ${memoTexts.length} "${MEMO_ENVELOPE}" memo instructions.`,
+    'One transaction making two canonical attestations is ambiguous, and choosing one of them would '
+    + 'be this script guessing at exactly the question it was written to answer.',
+  );
+}
+const memoText = memoTexts[0] ?? null;
 // Minimal base58 decode — avoids adding a dependency to a launch-critical script.
 function bs58Decode(s) {
   const A = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -395,7 +480,7 @@ for (const s of sigs) {
     if (ks[ix.programIdIndex] !== MEMO_PROGRAM) continue;
     const d = ix.data;
     const text = Buffer.from(typeof d === 'string' ? bs58Decode(d) : d).toString('utf8');
-    if (!text.startsWith('escapement canonical v1')) continue;
+    if (!text.startsWith(MEMO_ENVELOPE)) continue;
     const n = Number((text.match(/^memo=(\d+)$/m) ?? [])[1]);
     // The committed hash is kept, not just the number, so a mismatch below can
     // say WHICH of the two mismatches it is. See the rollback discriminator.
@@ -428,6 +513,27 @@ check(cmp.fabricated.length === 0, 'no published memo is missing from the chain'
 check(cmp.mismatched.length === 0, 'each published signature matches the chain for that memo number',
   cmp.mismatched.length === 0 ? 'signatures agree'
     : `substituted: ${cmp.mismatched.map((x) => `#${x.n}`).join(', ')}`);
+
+/**
+ * Two different memos on chain under one number.
+ *
+ * This is the check that was missing, and its absence was exploitable: a blind
+ * review landed a second memo #2 committing a scam record and this script
+ * printed VERIFY-CANONICAL CLEAR. Every other check compared by number and was
+ * satisfied by the honest entry.
+ *
+ * It cannot be repaired by republishing. The chain is append-only, so once two
+ * memos share a number the ambiguity is permanent and the only honest response
+ * is to name both signatures and let a reader look at them. The right recovery
+ * is a NEW, higher-numbered memo that supersedes both — not a quiet preference
+ * for whichever one we like.
+ */
+// @enforces A8 no-two-chain-memos-share-a-number
+check(cmp.duplicated.length === 0, 'no memo number appears twice on chain',
+  cmp.duplicated.length === 0 ? 'every number is unique'
+    : cmp.duplicated.map((g) => `#${g.n} is claimed by ${g.signatures.join(' AND ')}`).join('; ')
+      + ' — the chain is ambiguous about what that memo says. Do not trust either until a higher-numbered'
+      + ' memo supersedes them.');
 
 // ---------------------------------------------------------------------------
 section('do the record and the chain agree');
@@ -498,7 +604,28 @@ section(`the ${PRE_LAUNCH_DAYS}-day pre-launch window (RUNBOOK §6.5)`);
 // not the first moment it was deployed. A record served from a host we do not
 // control proves nothing about when it appeared; the memo does.
 const first = list.reduce((a, b) => (b.n < a.n ? b : a));
-const firstTx = first.n === newest.n ? tx : await rpcCall('getTransaction', [first.signature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' }], rpc);
+
+/**
+ * The only RPC call in this file that was outside a try/catch.
+ *
+ * A rate limit here threw past the Refused handler and exited 1 — "the checks
+ * ran and something FAILED" — when the truth was "we could not reach the chain",
+ * which is exit 2. The comment near the top of this file names that distinction
+ * as load-bearing, and one unguarded call was quietly violating it.
+ */
+let firstTx;
+if (first.n === newest.n) {
+  firstTx = tx;
+} else {
+  try {
+    firstTx = await rpcCall('getTransaction', [first.signature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' }], rpc);
+  } catch (e) {
+    if (e instanceof Refused) throw e;
+    refuse(`getTransaction(${first.signature}) failed while dating memo #${first.n} — ${e.message}`,
+      'The pre-launch window is measured from memo #1, so an unreachable chain here means the window '
+      + 'is unknown rather than unsatisfied.');
+  }
+}
 
 // blockTime is the validator's estimate, not consensus. It is right for a
 // 14-day window measured in days and would be wrong for anything finer; the
