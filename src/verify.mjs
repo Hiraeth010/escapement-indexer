@@ -30,6 +30,8 @@
 
 import { runIndex } from './run.mjs';
 import { independentRoot, independentDomain } from './verify-merkle.mjs';
+import { SCHEMA_VERSION } from './version.mjs';
+import { DOMAIN_TAG } from './merkle.mjs';
 import { LineHasher } from './canonical.mjs';
 
 /**
@@ -46,6 +48,9 @@ export async function runVerify({
   expectedRoot, publishedArtifact = null, publishedInputSetText = null,
   prior = new Map(), priorSource = null,
   openingAccounts = [], openingStateSource = null,
+  // Only used when there is no published artifact to read it from — i.e. the
+  // `--root <hex>` path, where nothing on disk declares a namespace.
+  domainTag = DOMAIN_TAG,
   concurrency = 4, onProgress = null,
 }) {
   // The prior is the artifact BEFORE the one under verification, never the one
@@ -63,9 +68,54 @@ export async function runVerify({
     });
   }
 
+  /**
+   * WHICH NAMESPACE ARE WE REBUILDING IN? The published artifact decides.
+   *
+   * Resolved BEFORE any RPC work, for two reasons. The cheap one: there is no
+   * point spending a hundred megabytes to conclude that the root was never
+   * reproducible. The load-bearing one: `commitmentDomain` defaults its tag, so
+   * an artifact whose tag field was removed would be rebuilt in OURS and could
+   * come back AGREE — a third party's file validating against Escapement's
+   * namespace, which is the exact confusion the tag exists to prevent.
+   *
+   * The first version of this read the tag off `artifact`, the one runIndex had
+   * just produced, rather than off `publishedArtifact`. That is our own tag by
+   * construction, so it always matched and the refusal could never fire. Same
+   * shape as every other fail-open here: a correct check pointed at the wrong
+   * object. Two tests caught it.
+   */
+  let verifyTag = domainTag;
+  if (publishedArtifact) {
+    const claimed = publishedArtifact.params?.merkle_domain_tag;
+    if (typeof claimed !== 'string' || claimed.length === 0) {
+      return {
+        agree: false,
+        computedRoot: null,
+        expectedRoot: expectedRoot ?? publishedArtifact.merkle_root ?? null,
+        independentRoot: null,
+        internallyConsistent: false,
+        artifact: publishedArtifact,
+        findings: [...preflight, {
+          level: 'refuse',
+          where: 'artifact.params.merkle_domain_tag',
+          detail:
+            'This artifact does not name the domain tag its leaves were built in, so its root cannot be '
+            + 're-derived — not by us and not by anyone. Artifacts written before schema '
+            + `${SCHEMA_VERSION} predate both the tag and the length prefix now inside the domain preimage, `
+            + 'so their domain bytes are not reproducible under any tag. Regenerate with the current code '
+            + 'rather than trusting a root nothing here can rebuild. This is a refusal to reach a verdict, '
+            + 'not a finding that the arithmetic is wrong — those are different claims and must not print '
+            + 'the same way.',
+        }],
+      };
+    }
+    verifyTag = claimed;
+  }
+
   const { artifact, inputSet, dist } = await runIndex({
     rpc, mint, from, to, exclusions, configPubkey, vaultLamports, vaultSource,
     prior, priorSource, openingAccounts, openingStateSource, concurrency, onProgress,
+    domainTag: verifyTag,
   });
 
   const findings = [...preflight];
@@ -82,7 +132,23 @@ export async function runVerify({
     // because a domain mismatch and a tree mismatch have different causes and
     // reporting them as one finding would lose that.
     const ourDomain = artifact.params.merkle_domain;
-    const theirDomain = independentDomain(configPubkey, exclusions.policyBinding);
+
+    /**
+     * The tag comes from the ARTIFACT, and its absence is a refusal.
+     *
+     * Verification means re-deriving what the PUBLISHER says they did, so
+     * reading our own default here would be checking ourselves. Worse, the
+     * parameter defaults to Escapement's tag, so an artifact that simply had
+     * the field removed would sail through by being re-derived under OUR
+     * namespace — a third party's stripped artifact validating against our
+     * domain is precisely the confusion the tag exists to prevent.
+     *
+     * Pre-v3 artifacts also predate the length prefix, so their domain bytes
+     * are not reproducible under any tag. Naming that explicitly beats letting
+     * them fail as a mystery mismatch.
+     */
+    // `verifyTag` is the publisher's, resolved above and already proven present.
+    const theirDomain = independentDomain(configPubkey, exclusions.policyBinding, verifyTag);
     if (ourDomain !== theirDomain) {
       internallyConsistent = false;
       findings.push({

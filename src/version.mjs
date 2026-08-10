@@ -32,7 +32,22 @@ import { sha256Hex } from './canonical.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
-export const SCHEMA_VERSION = 'escapement.artifact/v1';
+/**
+ * v2 — the leaf domain preimage changed, so v1 roots are not reproducible here.
+ *
+ * Two changes, one consequence. The domain tag became a caller-supplied argument
+ * so this tool has a user who is not us, and the moment it did, `tag || config ||
+ * binding` stopped being an unambiguous encoding: a longer tag can absorb the
+ * leading bytes of the config key, which is domain separation defeated by the
+ * concatenation meant to provide it. A u16 length prefix closes that, and it
+ * changes the domain bytes for every artifact including ours.
+ *
+ * Bumped rather than quietly reused. A v1 artifact's `merkle_domain` cannot be
+ * re-derived under any tag by this code, and a schema string that stayed put
+ * would turn "built by an older version" into "the publisher is lying", which
+ * are not the same finding and must not print the same way.
+ */
+export const SCHEMA_VERSION = 'escapement.artifact/v2';
 
 /**
  * A hash over this source tree's non-test modules.

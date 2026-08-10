@@ -12,7 +12,7 @@ import { fetchRange } from './blocks.mjs';
 import { extractBlock } from './extract.mjs';
 import { accrue, ledgerFrom } from './accrue.mjs';
 import { distribute } from './entitle.mjs';
-import { buildTree, commitmentDomain } from './merkle.mjs';
+import { buildTree, commitmentDomain, DOMAIN_TAG } from './merkle.mjs';
 import { PREDICATE_BUCKET, UNDECIDED_BUCKET } from './exclusions.mjs';
 import { RULES } from './predicate.mjs';
 import { LineHasher, hashValue, canonicalJson, sha256Hex } from './canonical.mjs';
@@ -63,6 +63,9 @@ export function buildInputSet({ mint, from, to, produced, skipped, blocks, extra
  * @param {number} args.to   exclusive
  * @param {ReturnType<import('./exclusions.mjs').parseExclusions>} args.exclusions
  * @param {string|null} args.configPubkey  required to produce a merkle root
+ * @param {string} [args.domainTag]  leaf namespace; defaults to Escapement's. A third
+ *   party running this for their own distribution passes their own, and it is written
+ *   into the artifact so the root stays reproducible by someone who only has the file.
  * @param {bigint|null} args.vaultLamports required to produce a merkle root
  * @param {Map<string,bigint>} [args.prior]
  * @param {{account,owner,amount}[]} [args.openingAccounts]
@@ -70,7 +73,7 @@ export function buildInputSet({ mint, from, to, produced, skipped, blocks, extra
  */
 export async function runIndex({
   rpc, mint, from, to, exclusions,
-  configPubkey = null, vaultLamports = null, vaultSource = null,
+  configPubkey = null, vaultLamports = null, vaultSource = null, domainTag = DOMAIN_TAG,
   prior = new Map(), priorSource = null,
   openingAccounts = [], openingStateSource = null,
   concurrency = 4, onProgress = null,
@@ -207,7 +210,7 @@ export async function runIndex({
   let domain = null;
   if (configPubkey !== null && vaultLamports !== null) {
     // The leaf domain binds the deployment AND the policy. See merkle.mjs.
-    domain = commitmentDomain(configPubkey, exclusions.policyBinding);
+    domain = commitmentDomain(configPubkey, exclusions.policyBinding, domainTag);
     dist = distribute({ vaultLamports, ledger, prior });
     tree = buildTree(domain, dist.rows.map((r) => ({ claimant: r.owner, cumulative: r.cumulative })));
   }
@@ -289,6 +292,10 @@ export async function runIndex({
     // The one value that stands for "everything about who gets paid that is not
     // chain data". Bound into the merkle domain, so it cannot change silently.
     policy_binding: exclusions.policyBinding,
+    // The namespace the leaves were built in. Recorded unconditionally, including
+    // when it is the default: an artifact that only names the tag when it is
+    // unusual makes the common case the one a verifier has to guess at.
+    merkle_domain_tag: domainTag,
     merkle_domain: domain,
     opening_state: openingState,
     prior_root_source: priorSource,

@@ -253,30 +253,32 @@
     "vault_lamports": "1000000000"
   },
   "environment": {
-    "indexer_git_commit": "43d091cc81c10d4a146823960e183b647dd4ecf8",
-    "indexer_git_dirty": false,
+    "indexer_git_commit": "ce7e7c3aaabc5803928402c1e5f59f836a380730",
+    "indexer_git_dirty": true,
     "indexer_source_files": [
       "accrue.mjs b7ab56e59addaca86ea4b61c1e959f3e694e046b84583891bb11f78009f5b1a1",
       "base58.mjs e2c8c833f07adaeb32ac10094c3d82ac2baaad1f7cda7b920eab6c7ba6de5644",
-      "blocks.mjs e24370b22b03edfc68ee1255cbab4153a4737b8c06fb8b768ba113874c601dce",
+      "blocks.mjs eea04d6d82a4425fe7cb3de2b3f2fa58e4c88cfe87b41c42f90944850f93bdc8",
       "canonical.mjs 934613e8d2b9212af4bc0d97e951e1ad74fa9398f74d4dcc08577b7a57956a04",
-      "cli.mjs 76d01592c3f4c07bb72964b0e01a47f0727a2c11171fb8e978778c717fafc0d5",
+      "cli.mjs fae10eb89dbf590c6bd85e9e254f7635937d204f03e63fc0ae7377c90ba75fa1",
       "curve.mjs 64af32441c4c4d3393734b9ecd72573752a69a8fdae264d0e16c74cda11c0b80",
       "entitle.mjs a8e6fbbb40800e87bc20a4d48325853b273f4c60675012010bb1887c20cc96f7",
       "exclusions.mjs 3212a57d814f6f90b66433357497f82abd3c50b6e463697764df832515d3ea1f",
       "extract.mjs b4458161ab98d5783d4c7c0a19a0dd15e15ddecee9ddc285b25b777599054d2c",
-      "merkle.mjs 112b24c355a07d8b253ed76111f275e46b550762d1aec6da6d5297a093ce813d",
+      "merkle.mjs 6df4b397b46efdf2088c9cb66390ad643efe56f503153230bfdb3d32ecf8260f",
+      "pot.mjs c2a2c930f951b65692897550b9b3013e89ee0d52fd09249035572cb2aa05955d",
       "predicate.mjs 8e05876044980c21341f8bae20ec4859bb3ffac36887c522b806e22a50934d75",
-      "rpc.mjs cef8d3e83ba2945a2aeb44ad7a6c9ad325d26106f42ee35f40c09d985ac598ce",
-      "run.mjs db84e8111d98492238460676358469d21662b7ed4d448d19a21dda17c52119ac",
-      "verify-merkle.mjs 0c337d666e9c9b2dd7100c46d3304c48ccf0271930c4612f8487181a446b1d62",
-      "verify.mjs e1ffd32f924bc1a9c313718e97753bf692c168f66bc3906eac15a7f8a403d6bb",
-      "version.mjs a7a27c4137d057525978cfd33343e8a5c2689832a393218137bfb2193305ef36"
+      "rpc.mjs 999843e5815c3d2949ccdfadf69e7d972170d517cdc06e0cf7dd561961c098d4",
+      "run.mjs 6c3975e4664504f47f8df93b463d89d81fa3dae6525d11feff10f32c0e676787",
+      "snapshot.mjs 16539d9149e7978679a66df3289cd65a37daf5e8ab7f7f75b0373761240bcac3",
+      "verify-merkle.mjs a411a5d606d54a4d39f4ec7a32361b056bc3ff8793946fbeaed314baaee4a511",
+      "verify.mjs 1fe1299ee4707810bba5399584bd7931c38ff541121705854279e3af65ca03e5",
+      "version.mjs a7c4445a21eb21525df87a2d4ca133b9c9440efe7526c41bf46bf8f3cb3acdb2"
     ],
-    "indexer_source_hash": "6cb1df6b372fed8e434f0c0a0ed708208d9927cdfe8f72a7b9c2261510c2a3d7",
+    "indexer_source_hash": "af460778bb5d82fe5c3d3d0cd4f285de591d4a40348dcdcecd8b532b368c8abb",
     "node_version": "v24.13.0",
     "platform": "win32-x64",
-    "schema": "escapement.artifact/v1"
+    "schema": "escapement.artifact/v2"
   },
   "exclusions": {
     "acknowledgement_gaps": [],
@@ -304,8 +306,8 @@
     ],
     "version": "demo-2026-08-08.2"
   },
-  "indexer_git_commit": "43d091cc81c10d4a146823960e183b647dd4ecf8",
-  "indexer_source_hash": "6cb1df6b372fed8e434f0c0a0ed708208d9927cdfe8f72a7b9c2261510c2a3d7",
+  "indexer_git_commit": "ce7e7c3aaabc5803928402c1e5f59f836a380730",
+  "indexer_source_hash": "af460778bb5d82fe5c3d3d0cd4f285de591d4a40348dcdcecd8b532b368c8abb",
   "input_set_hash": "d80a7d4d98fe4772e94585041b07ff2142460dda1ab3b194f4b44d6cd92f9133",
   "ledger": [
     {
@@ -422,15 +424,16 @@
     }
   ],
   "ledger_hash": "b340ea4144d1fc136bc28aa2ee3cecf6ac3d870a9fbbef2bc416400a5bcb4fba",
-  "manifest_hash": "fabbe55e686cc8ec94ceb6d6cde9a9d126cb64eb9bc3fb0c4fbd8b9e1a594006",
-  "merkle_root": "e816781832dc3dcc8fea2b77874406e5772ba67a9343f0a69a063ab33965d483",
+  "manifest_hash": "313031b6444926fb1c657ebcf73f161a67a93d80f7e55d5035711852eb9bb6e4",
+  "merkle_root": "afbff247830c16042f9e81d536cdb191767a297bde4a03d9b4b9e945e35c08f0",
   "params": {
     "commitment": "finalized",
     "config_pubkey": "11111111111111111111111111111111",
     "exclusions_hash": "76d1e943c2ce7033ddb4ad99cf546815468ec837693c0a0ba00f662e95a818a8",
     "exclusions_version": "demo-2026-08-08.2",
     "from_slot": 437990510,
-    "merkle_domain": "8uEHp52XsyDMvkqcQMLSSDKHpKPNLKjnfheXi9qaynAV",
+    "merkle_domain": "HHtxJtktxkBTWULBYaP24CAfQF3tivASvoEwap4FmK7t",
+    "merkle_domain_tag": "escapement.merkle/v2:domain",
     "mint": "F1XdReoHL3GweeCG4sgoZGAdsUNt8sda8n5EE2TNpump",
     "opening_state": {
       "accounts": 39,
@@ -444,9 +447,9 @@
     "predicate_rules": [
       "off_curve_owner"
     ],
-    "prior_root_source": "artifacts/demo.F1XdReoHL3GweeCG4sgoZGAdsUNt8sda8n5EE2TNpump.437990500-437990510.json (root 83562f32d701c5754be2302b5707f8cbdcd6d9ab7339df6f3ca6509b4c431393)",
+    "prior_root_source": "artifacts/demo.F1XdReoHL3GweeCG4sgoZGAdsUNt8sda8n5EE2TNpump.437990500-437990510.json (root 6ea4b82f6910a659b0fe60c533f3dce781a7123f668f88d95dacdf8a72267f71)",
     "range_convention": "[from_slot, to_slot) — half-open, start inclusive, end exclusive",
-    "schema": "escapement.artifact/v1",
+    "schema": "escapement.artifact/v2",
     "to_slot": 437990520,
     "vault_lamports": "1000000000",
     "vault_lamports_source": "hypothetical"
@@ -657,22 +660,25 @@
       "off_curve_owner"
     ]
   },
-  "produced_at": "2026-08-08T13:32:56.953Z",
+  "produced_at": "2026-08-10T02:12:05.315Z",
   "rpc_cost": {
-    "calls": 12,
+    "calls": 22,
     "endpoint_host": "api.mainnet-beta.solana.com",
-    "response_bytes": 51389073,
-    "retries": 0,
-    "wall_ms": 3909
+    "response_bytes": 61634240,
+    "retries": 6,
+    "wall_ms": 16927
   },
-  "schema": "escapement.artifact/v1",
+  "schema": "escapement.artifact/v2",
   "slots": {
     "anchor_previous_blockhash": "6bVnYx1u53v356fD41DufhvLfRidABXfCMmrw8pGYiKT",
+    "continuity_links_checked": 11,
     "continuity_verified": true,
-    "finalized_tip_at_run": 438002010,
+    "finalized_tip_at_run": 438313987,
+    "head_anchor_slot": 437990509,
     "produced": 10,
     "skipped": 0,
     "skipped_slots": [],
+    "tail_anchor_slot": 437990520,
     "total": 10
   },
   "total_owed_cumulative": "1999999973",

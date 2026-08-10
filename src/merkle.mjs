@@ -55,26 +55,75 @@ export const NODE_PREFIX = 0x01;
 export const DOMAIN_TAG = 'escapement.merkle/v2:domain';
 
 /**
- * Bind a deployment and a policy into the 32-byte leaf domain.
+ * THE TAG IS AN ARGUMENT, BECAUSE THIS TOOL SHOULD HAVE A USER WHO IS NOT US.
  *
- * Returned base58-encoded because a domain is used everywhere a pubkey was, and
- * carrying one representation through the tree, the artifact and the proof means
- * there is no second encoding to get wrong. It is not a pubkey and is not
- * claimed to be one; it is 32 bytes written the way this project writes 32 bytes.
+ * A blind product review put this dimension below the launch bar for one
+ * structural reason: the census has a nameable user and the indexer does not.
+ * Part of why was right here — every leaf this thing can build carries the
+ * string "escapement" in its preimage, so anyone running it for their own
+ * distribution was committing to our namespace, in their tree, forever. That is
+ * not a branding complaint. It is the difference between a general-purpose
+ * merkle distributor and a piece of one project's plumbing published as if it
+ * were a tool.
+ *
+ * The tag is now an explicit argument that defaults to ours. Everything else
+ * about the leaf is unchanged: same prefix byte, same 73 bytes, same sorted
+ * pairs, same proof shape. A third party gets their own domain and an on-chain
+ * verifier written against this spec works for them unmodified.
+ *
+ * Two rules make that safe rather than merely possible:
+ *
+ *   - The tag is UTF-8 and length-prefixed into the hash. Without the length, a
+ *     tag of "a" + a config key beginning 0x62 would hash identically to a tag
+ *     of "ab" + a key one byte shorter — domain separation defeated by the very
+ *     concatenation meant to provide it. Our own default is unaffected in
+ *     meaning but its VALUE changes, which is why the pinned vector in
+ *     merkle.test.mjs is recomputed rather than kept.
+ *   - The tag must be non-empty and printable ASCII. An empty tag is the same
+ *     as no separation at all, and a tag nobody can retype is a tag nobody can
+ *     independently verify against.
+ *
+ * The empty root deliberately stays a single pinned constant, not per-tag: a
+ * tree with no leaves commits to no entitlements, so there is nothing for a
+ * cross-domain replay to steal. That reasoning is in the README and it holds
+ * for a third party exactly as it holds for us.
  *
  * @param {string} configPubkey base58 — the deployment's config PDA (C3)
  * @param {string} policyBindingHex 64 lowercase hex — from `exclusions.mjs`
+ * @param {string} [domainTag] the namespace; defaults to Escapement's
  * @returns {string} base58
  */
-export function commitmentDomain(configPubkey, policyBindingHex) {
+export function commitmentDomain(configPubkey, policyBindingHex, domainTag = DOMAIN_TAG) {
   if (typeof policyBindingHex !== 'string' || !/^[0-9a-f]{64}$/.test(policyBindingHex)) {
     throw new Error(`commitmentDomain: policy binding must be 64 lowercase hex characters, got ${JSON.stringify(policyBindingHex)}`);
   }
+  assertDomainTag(domainTag);
+  const tag = Buffer.from(domainTag, 'utf8');
+  const len = Buffer.alloc(2);
+  len.writeUInt16LE(tag.length);
   return b58encode(sha256(
-    Buffer.from(DOMAIN_TAG, 'utf8'),
+    len,
+    tag,
     pubkeyBytes(configPubkey, 'config'),
     Buffer.from(policyBindingHex, 'hex'),
   ));
+}
+
+/** Throws unless the tag is something a stranger could retype exactly. */
+export function assertDomainTag(domainTag) {
+  if (typeof domainTag !== 'string' || domainTag.length === 0) {
+    throw new Error(`domain tag must be a non-empty string, got ${JSON.stringify(domainTag)}`);
+  }
+  if (domainTag.length > 128) {
+    throw new Error(`domain tag must be at most 128 characters, got ${domainTag.length}`);
+  }
+  if (!/^[\x21-\x7e]+$/.test(domainTag)) {
+    throw new Error(
+      `domain tag must be printable ASCII with no spaces, got ${JSON.stringify(domainTag)}. `
+      + 'A tag carrying whitespace, control characters or anything outside ASCII is a tag that will be '
+      + 'transcribed wrong at least once, and a domain nobody can reproduce is a root nobody can check.',
+    );
+  }
 }
 
 /**

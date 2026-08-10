@@ -40,14 +40,24 @@ function key32(s) {
  * is the point of having a second implementation of the layer that turns policy
  * into a commitment, not only of the layer that turns leaves into a root.
  */
-export function independentDomain(configPubkey, policyBindingHex) {
+export function independentDomain(configPubkey, policyBindingHex, domainTag = 'escapement.merkle/v2:domain') {
   if (!/^[0-9a-f]{64}$/.test(policyBindingHex ?? '')) {
     throw new Error('verify-merkle: policy binding must be 64 lowercase hex characters');
   }
-  const tag = Buffer.from('escapement.merkle/v2:domain', 'utf8');
+  // Same validation as merkle.mjs, written out again rather than imported: a
+  // second implementation that borrows the first one's input checks is not a
+  // second implementation of the input checks.
+  if (typeof domainTag !== 'string' || domainTag.length === 0 || domainTag.length > 128
+      || !/^[\x21-\x7e]+$/.test(domainTag)) {
+    throw new Error(`verify-merkle: bad domain tag ${JSON.stringify(domainTag)}`);
+  }
+  const tag = Buffer.from(domainTag, 'utf8');
+  // u16 little-endian length prefix. Without it "a"+0x62… and "ab"+… collide,
+  // so a caller could pick a tag that lands inside somebody else's domain.
+  const len = Buffer.from([tag.length & 0xff, (tag.length >> 8) & 0xff]);
   const cfg = Buffer.from(key32(configPubkey));
   const bind = Buffer.from(policyBindingHex, 'hex');
-  const digest = createHash('sha256').update(Buffer.concat([tag, cfg, bind])).digest();
+  const digest = createHash('sha256').update(Buffer.concat([len, tag, cfg, bind])).digest();
 
   // base58, written out rather than imported, for the same reason as the rest.
   const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';

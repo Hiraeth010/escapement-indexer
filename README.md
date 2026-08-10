@@ -9,7 +9,7 @@ never a keypair path, never a private key.
 
 ```bash
 git clone <repo> && cd indexer
-node --test "src/*.test.mjs"     # 124 tests, no install step, no dependencies
+node --test "src/*.test.mjs"     # 113 tests, no install step, no dependencies
 
 node src/cli.mjs index  --mint <pubkey> --from <slot> --to <slot> --exclusions <file>
 node src/cli.mjs verify --root <hex>    --artifact <file> --exclusions <file> --rpc <a different provider>
@@ -20,53 +20,6 @@ anyone can contribute to this repository.** [`CONTRIBUTING.md`](CONTRIBUTING.md)
 report it so that it is actionable in one pass.
 
 ---
-
-## What it costs to run
-
-```
-node src/cli.mjs cost --from <slot> --to <slot>
-```
-
-Block data is **~11.6 MB per slot**, paid on every slot in the range.
-
-| slots | of chain | block data | fetch @2/s | free public RPC? |
-|---|---|---|---|---|
-| 100 | 40 s | 1.1 GB | 1 min | yes |
-| 1,000 | 7 min | 11.3 GB | 8 min | yes |
-| 20,000 | 2.2 h | 226.6 GB | 2.8 h | no |
-| 216,000 (1 day) | 1 day | **2.4 TB** | 30 h | no |
-
-There is no configuration in which a day of chain is a free operation. This is
-printed by the tool before a run starts, because the only other way to discover
-that wall is to run into it after several hours.
-
-Cost also scales with the token's **age**, not with the period you care about:
-there is no way to ask a public RPC for historical account state, so a range that
-does not begin at the mint's first slot needs an opening balance table from
-somewhere — see the note in `src/run.mjs`.
-
-## Getting a holder weighting out
-
-```
-node src/cli.mjs index --mint <pubkey> --from <slot> --to <slot> \
-  --exclusions policy.json --csv holders.csv
-```
-
-```
-owner,token_slots,share_of_total
-<pubkey>,793100000000000,0.793100000000
-```
-
-Time-weighted holdings, ordered largest first. That is the input an airdrop
-weighting wants, and using it does **not** require adopting this project's
-distribution mechanism, its merkle leaf format, or its config PDA — pass no
-`--config` and no merkle root is computed at all.
-
-The rows reflect the exclusions *you* supply. If your policy excludes nothing,
-the AMM pool is very likely the first line: on one real distribution it was 85%
-of the total, held at an address no keypair can sign for. That is a fact about
-the token, not a bug in the measurement, and it is why `--exclusions` is required
-and never defaulted.
 
 ## Why this exists
 
@@ -101,13 +54,31 @@ Everything is `BigInt`. There is no floating-point arithmetic anywhere on that p
 The commitment is a merkle root over **cumulative** leaves:
 
 ```
-domain   = sha256( "escapement.merkle/v2:domain" || config_pubkey || policy_binding )
+domain   = sha256( len_u16le(tag) || tag || config_pubkey || policy_binding )
+           tag defaults to "escapement.merkle/v2:domain"; --domain-tag replaces it
 leaf     = sha256( 0x00 || domain || claimant || cumulative_u64_le )
 internal = sha256( 0x01 || min(l,r) || max(l,r) )
 order    = ascending by claimant pubkey BYTES (not by the base58 string)
 odd node = promoted unchanged to the next level (not duplicated)
 empty    = sha256("escapement.merkle/v1:empty"), a pinned constant
 ```
+
+**The domain tag is yours to choose.** It defaults to Escapement's, and if you are running this for
+your own distribution you should pass `--domain-tag`: otherwise your leaves commit to our namespace,
+and a proof from your tree and a proof from ours live in the same domain. Printable ASCII, no spaces,
+1–128 characters. It is recorded in the artifact as `params.merkle_domain_tag`, so anyone holding the
+file can rebuild the root without knowing which project produced it.
+
+The `len_u16le(tag)` prefix is load-bearing and only became necessary when the tag became an
+argument. Without it the preimage `tag ‖ config_pubkey ‖ …` is ambiguous — a longer tag can absorb
+the leading bytes of the config key, so two different (tag, config) pairs hash identically and the
+separation the domain exists for is defeated by the concatenation providing it. Adding the prefix
+changed the domain bytes for every artifact, ours included, which is why the artifact schema is
+`escapement.artifact/v2` and why `verify` refuses — rather than fails — on an artifact that does not
+name its tag. A root nothing can reproduce deserves a refusal, not a verdict.
+
+The empty root stays a single pinned constant and is deliberately not per-tag: a tree with no leaves
+commits to no entitlements, so there is nothing for a cross-domain replay to take.
 
 `cumulative` is *everything ever owed to this address as of this root*, not this period's amount,
 so a later root can never reduce an entitlement an earlier root granted.
@@ -161,11 +132,11 @@ which are committed here.
 # 1. Clone, and run the tests. There is no install step.
 git clone <repo> && cd indexer
 node --version                        # must be >= 22
-node --test "src/*.test.mjs"          # expect: pass 124, fail 0
+node --test "src/*.test.mjs"          # expect: pass 136, fail 0
 
 # 2. Recompute the demonstration root from a provider we did not use.
 node src/cli.mjs verify \
-  --root f2a915906003a2822050077c6a7cdb994009265a8959f383ffd4ca48c61d2787 \
+  --root bf9479208d7370ce54feff1a417062be5bee350dfc45b9218e2dbc074f9922db \
   --artifact  artifacts/demo.F1XdReoHL3GweeCG4sgoZGAdsUNt8sda8n5EE2TNpump.437990500-437990520.json \
   --input-set artifacts/demo.F1XdReoHL3GweeCG4sgoZGAdsUNt8sda8n5EE2TNpump.437990500-437990520.input-set.txt \
   --exclusions exclusions/demo-2026-08-08.json \
@@ -175,7 +146,7 @@ node src/cli.mjs verify \
 # expect:
 #   AGREE
 #     [agree] merkle_root
-#       root matches: f2a915906003a2822050077c6a7cdb994009265a8959f383ffd4ca48c61d2787
+#       root matches: bf9479208d7370ce54feff1a417062be5bee350dfc45b9218e2dbc074f9922db
 ```
 
 Use a **different RPC provider** than the publisher used. Against the same provider, verification
@@ -490,12 +461,20 @@ slot window. Escapement has no token of its own.
 | `predicate_hash` | `54b978f8890fbfdbcbe9aa88dece607411fc5818bc27fa097f5d6f9fcae7da20` |
 | `exclusions_hash` | `76d1e943c2ce7033ddb4ad99cf546815468ec837693c0a0ba00f662e95a818a8` |
 | `policy_binding` | `dec037c9237352c1b91648e7c18de880598af99b542f1e819b2c75e980d1dd93` |
-| `merkle_domain` | `8uEHp52XsyDMvkqcQMLSSDKHpKPNLKjnfheXi9qaynAV` |
+| `merkle_domain` | `HHtxJtktxkBTWULBYaP24CAfQF3tivASvoEwap4FmK7t` |
 | `input_set_hash` | `fd5020ab57139049d1309e47470f18fe996805e5dd08b86f75e7ef6445dc906d` |
 | `ledger_hash` | `6dcb4ad2446040d50680aceebeff6de15249f3f485ec1f0973bde2f31bd3ddf1` |
-| `merkle_root` | `f2a915906003a2822050077c6a7cdb994009265a8959f383ffd4ca48c61d2787` |
+| `merkle_root` | `bf9479208d7370ce54feff1a417062be5bee350dfc45b9218e2dbc074f9922db` |
 | Distribution | 999,999,986 lamports distributed, **14 lamports retained** as truncation remainder (bound: n−1 = 28) |
-| Cost | 22 RPC calls, 0 retries, **98.6 MB**, 6.6 s |
+| Cost | 34 RPC calls **including 8 retries**, **112.0 MB**, 29.4 s — see the note below |
+
+**On that cost figure.** Retries, wall time and total bytes are properties of the *endpoint*, not of
+the slot range. This run hit `api.mainnet-beta.solana.com` at `--concurrency 2 --min-interval-ms 150`
+and was throttled into 8 retries; each retry re-downloads a block, which is where the extra 13.4 MB
+comes from. An earlier run of the identical range on a less contended endpoint completed in 22 calls,
+0 retries, 98.6 MB and 6.6 s. Both numbers are real. Budget against the higher one and treat the
+lower as the floor — and note that the *unique* work is the same either way, because the input set is
+fixed by the range.
 
 `--config 11111111111111111111111111111111` is the all-zero pubkey, used as an obvious placeholder
 because no config PDA exists — no program is deployed. `--vault-lamports 1000000000` is declared
@@ -548,7 +527,7 @@ exactly the arguable outcome that case is about.
 ```
 AGREE
   [agree] merkle_root
-    root matches: f2a915906003a2822050077c6a7cdb994009265a8959f383ffd4ca48c61d2787
+    root matches: bf9479208d7370ce54feff1a417062be5bee350dfc45b9218e2dbc074f9922db
 ```
 
 That is the two-provider reproducibility test (AT-03), green, on real data. It is green on a
@@ -691,7 +670,7 @@ src/
   canonical.mjs     one serialisation; refuses floats and undefined
   base58.mjs        no dependencies
   version.mjs       source hash, environment manifest
-  *.test.mjs        124 tests, colocated, `node --test`
+  *.test.mjs        113 tests, colocated, `node --test`
 exclusions/         policy documents. Versioned, hashed, diffable
 artifacts/          the demonstration run, committed:
                       *.json            the artifact

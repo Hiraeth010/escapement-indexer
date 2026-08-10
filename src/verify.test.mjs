@@ -36,6 +36,65 @@ test('verify agrees with a root the indexer just produced', async () => {
   assert.equal(res.independentRoot, artifact.merkle_root);
 });
 
+// ---------------------------------------------------------------------------
+// The domain tag: an artifact that does not name its namespace gets a REFUSAL,
+// not a verdict. Every fail-open in this project has lived in the glue between
+// a tested function and its live inputs, and this is that glue: `commitmentDomain`
+// defaults its tag, so a stripped field would silently be re-derived under OURS.
+// ---------------------------------------------------------------------------
+
+test('a third party can build in their own namespace, and their root is reproducible from the file alone', async () => {
+  const chain = scenario();
+  const TAG = 'acme.rewards/v1';
+  const { artifact, inputSet } = await runIndex({ ...RUN, rpc: mockRpc(chain), domainTag: TAG });
+
+  assert.equal(artifact.params.merkle_domain_tag, TAG,
+    'the tag must be in the artifact, or the root cannot be rebuilt by someone who only has the file');
+
+  const res = await runVerify({
+    ...RUN, rpc: mockRpc(chain),
+    expectedRoot: artifact.merkle_root,
+    publishedArtifact: publish(artifact),
+    publishedInputSetText: inputSet.text(),
+  });
+  assert.equal(res.agree, true, 'a non-Escapement artifact must verify on its own terms');
+  assert.equal(res.internallyConsistent, true);
+});
+
+test('the same chain under two tags produces two different roots', async () => {
+  const chain = scenario();
+  const a = await runIndex({ ...RUN, rpc: mockRpc(chain) });
+  const b = await runIndex({ ...RUN, rpc: mockRpc(chain), domainTag: 'acme.rewards/v1' });
+  assert.equal(a.artifact.ledger_hash, b.artifact.ledger_hash, 'precondition: identical chain data');
+  assert.notEqual(a.artifact.merkle_root, b.artifact.merkle_root,
+    'identical data in different namespaces must not collide, or the tag separates nothing');
+});
+
+test('an artifact with no domain tag is REFUSED, not re-derived under ours', async () => {
+  const chain = scenario();
+  const { artifact, inputSet } = await runIndex({ ...RUN, rpc: mockRpc(chain) });
+
+  // The whole hazard in one line: strip the field an artifact uses to declare its
+  // namespace. Because the parameter has a default, the naive implementation
+  // rebuilds it as Escapement's and reports AGREE on a file that never said so.
+  const stripped = publish(artifact);
+  delete stripped.params.merkle_domain_tag;
+
+  const res = await runVerify({
+    ...RUN, rpc: mockRpc(chain),
+    expectedRoot: artifact.merkle_root,
+    publishedArtifact: stripped,
+    publishedInputSetText: inputSet.text(),
+  });
+
+  assert.equal(res.agree, false, 'a root nothing can reproduce must never come back AGREE');
+  const refusals = res.findings.filter((f) => f.level === 'refuse');
+  assert.equal(refusals.length, 1, `expected exactly one refusal, got ${JSON.stringify(res.findings)}`);
+  assert.equal(refusals[0].where, 'artifact.params.merkle_domain_tag');
+  // A refusal is not a finding of fraud, and must not read as one.
+  assert.match(refusals[0].detail, /refusal to reach a verdict/);
+});
+
 test('verify disagrees with a fabricated root and says the arithmetic is not the issue', async () => {
   const chain = scenario();
   const { artifact, inputSet } = await runIndex({ ...RUN, rpc: mockRpc(chain) });

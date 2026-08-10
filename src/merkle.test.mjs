@@ -126,14 +126,79 @@ test('a proof from one deployment does not verify against another (C3)', () => {
 const BINDING_A = 'a'.repeat(64);
 const BINDING_B = 'b'.repeat(64);
 
-test('the commitment domain is exactly sha256(tag || config || policy_binding)', () => {
+test('the commitment domain is exactly sha256(len || tag || config || policy_binding)', () => {
+  const tag = Buffer.from(DOMAIN_TAG, 'utf8');
   const expected = createHash('sha256')
-    .update(Buffer.from(DOMAIN_TAG, 'utf8'))
+    .update(Buffer.from([tag.length & 0xff, (tag.length >> 8) & 0xff]))
+    .update(tag)
     .update(Buffer.from(pubkeyBytes(CONFIG)))
     .update(Buffer.from(BINDING_A, 'hex'))
     .digest();
   assert.equal(hex(pubkeyBytes(commitmentDomain(CONFIG, BINDING_A))), hex(expected));
   assert.equal(DOMAIN_TAG, 'escapement.merkle/v2:domain');
+});
+
+// ---------------------------------------------------------------------------
+// The tag is an argument now, so that somebody who is not us can use this.
+// ---------------------------------------------------------------------------
+
+test('a custom domain tag produces a different domain, and the default is unchanged by passing it', () => {
+  assert.notEqual(commitmentDomain(CONFIG, BINDING_A, 'acme.rewards/v1'),
+    commitmentDomain(CONFIG, BINDING_A));
+  assert.equal(commitmentDomain(CONFIG, BINDING_A, DOMAIN_TAG),
+    commitmentDomain(CONFIG, BINDING_A),
+    'passing the default explicitly must be identical to omitting it, or every artifact we have '
+    + 'published becomes unreproducible by anyone who reads the signature');
+});
+
+test('a proof under one tag does not verify under another', () => {
+  const entries = Array.from({ length: 9 }, (_, i) => ({ claimant: pk(i + 1), cumulative: BigInt(i + 1) }));
+  const mine = buildTree(commitmentDomain(CONFIG, BINDING_A), entries);
+  const theirs = commitmentDomain(CONFIG, BINDING_A, 'acme.rewards/v1');
+  assert.equal(verifyProof({
+    domain: theirs, claimant: mine.order[0],
+    cumulative: entries.find((e) => e.claimant === mine.order[0]).cumulative,
+    proof: proofFor(mine, 0), root: mine.root,
+  }), false, 'a third party must not be able to replay our proofs into their tree, or vice versa');
+});
+
+test('the tag is length-prefixed, so a shifted tag cannot land in another domain', () => {
+  // Without the u16 length, sha256(tag || config || binding) lets an attacker
+  // choose a LONGER tag whose extra bytes are the first bytes of the config key
+  // — the concatenation is ambiguous and two different (tag, config) pairs hash
+  // the same. Constructed concretely: take a config key, move its leading byte
+  // into the tag, and check the two do not collide.
+  const cfgBytes = Buffer.from(pubkeyBytes(CONFIG));
+  const shiftedTag = DOMAIN_TAG + String.fromCharCode(cfgBytes[0]);
+  // Only meaningful if that byte is a legal tag character; pick one that is.
+  const tagB = /^[\x21-\x7e]$/.test(String.fromCharCode(cfgBytes[0])) ? shiftedTag : `${DOMAIN_TAG}x`;
+  assert.notEqual(commitmentDomain(CONFIG, BINDING_A, tagB), commitmentDomain(CONFIG, BINDING_A));
+
+  // The direct statement of the property: tag length is inside the hash.
+  assert.notEqual(commitmentDomain(CONFIG, BINDING_A, 'ab'), commitmentDomain(CONFIG, BINDING_A, 'a'));
+});
+
+test('a domain tag that cannot be retyped exactly is refused', () => {
+  for (const bad of ['', ' ', 'has space', 'tab\there', 'nul\0byte', 'café', 'x'.repeat(129), null, 7]) {
+    assert.throws(() => commitmentDomain(CONFIG, BINDING_A, bad),
+      /domain tag/, `tag ${JSON.stringify(bad)} must be refused`);
+  }
+  assert.equal(typeof commitmentDomain(CONFIG, BINDING_A, 'x'.repeat(128)), 'string');
+
+  // `undefined` is NOT a bad tag — it is how the default parameter is selected,
+  // and it must stay that way: an explicitly-passed undefined from a caller that
+  // did not set the option has to mean "ours", not "throw".
+  assert.equal(commitmentDomain(CONFIG, BINDING_A, undefined), commitmentDomain(CONFIG, BINDING_A));
+  // But null is a value somebody chose, not an absence, so it is refused above.
+});
+
+test('the second implementation agrees on custom tags too', () => {
+  for (const t of [DOMAIN_TAG, 'acme.rewards/v1', 'a', 'x'.repeat(128), '~!@#$%^&*()_+']) {
+    assert.equal(independentDomain(CONFIG, BINDING_A, t), commitmentDomain(CONFIG, BINDING_A, t), `tag ${t}`);
+  }
+  for (const bad of ['', 'has space', 'x'.repeat(129)]) {
+    assert.throws(() => independentDomain(CONFIG, BINDING_A, bad), /domain tag/);
+  }
 });
 
 test('the second implementation derives the same domain', () => {

@@ -78,6 +78,12 @@ TO PRODUCE A MERKLE ROOT (otherwise only the token-slot ledger is produced)
   --vault-source <s>    required with the above: chain | manual-attested | hypothetical
   --prior <artifact>    the PREVIOUS period's artifact, so leaves stay cumulative (G3).
                         On verify, this is the artifact BEFORE the one under test.
+  --domain-tag <s>      the leaf namespace. Defaults to Escapement's. If you are
+                        running this for your OWN distribution, pass your own —
+                        otherwise your leaves commit to our namespace forever, and
+                        our proofs and yours live in the same domain. Printable
+                        ASCII, no spaces, 1-128 chars. It is written into the
+                        artifact, so anyone holding the file can rebuild the root.
 
 CHAINING PERIODS
   --opening-state <artifact>  the previous period's artifact, whose closing_state
@@ -229,6 +235,9 @@ async function cmdIndex(args) {
   const { artifact, inputSet } = await runIndex({
     rpc, mint, from, to, exclusions, configPubkey, vaultLamports, vaultSource, prior, priorSource,
     openingAccounts, openingStateSource,
+    // Omitted, not defaulted-to-null: run.mjs owns the default, and passing null
+    // here would override it with something commitmentDomain refuses outright.
+    ...(args['domain-tag'] === undefined ? {} : { domainTag: args['domain-tag'] }),
     concurrency: args.concurrency ? Number(args.concurrency) : 4,
     onProgress: progressBar(args.quiet),
   });
@@ -353,6 +362,9 @@ async function cmdVerify(args) {
 
   const res = await runVerify({
     rpc, mint, from, to, exclusions, configPubkey, vaultLamports, openingAccounts, openingStateSource,
+    // Only consulted on the --root-only path; with --artifact the published file's
+    // own tag wins, because verification re-derives what the PUBLISHER did.
+    ...(args['domain-tag'] === undefined ? {} : { domainTag: args['domain-tag'] }),
     vaultSource: args['vault-source'] ?? published?.params?.vault_lamports_source ?? null,
     expectedRoot, publishedArtifact: published, publishedInputSetText, prior, priorSource,
     concurrency: args.concurrency ? Number(args.concurrency) : 4,
