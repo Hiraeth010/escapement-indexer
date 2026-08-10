@@ -108,10 +108,19 @@ const PRE_LAUNCH_DAYS = Number(process.env.ESCAPEMENT_PRE_LAUNCH_DAYS ?? 0);
 const arg = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i === -1 ? d : process.argv[i + 1]; };
 const flag = (n) => process.argv.includes(`--${n}`);
 
+/**
+ * A refusal unwinds; it does not terminate.
+ *
+ * process.exit() while undici holds a keep-alive socket makes Node abort — on
+ * Windows the process dies with 0xC0000409 instead of the exit code the caller
+ * is checking. Every early exit in this file had that shape, so a REFUSE could
+ * report a crash rather than a refusal to anything scripting it.
+ */
+class Refused extends Error {}
 const refuse = (...lines) => {
   for (const l of lines) console.log(`REFUSE  ${l}`);
   console.log('\nRefused. Nothing was checked; do not proceed.');
-  process.exit(2);
+  throw new Refused();
 };
 
 function requiredStr(n, why) {
@@ -120,17 +129,28 @@ function requiredStr(n, why) {
   return v;
 }
 
-const site = requiredStr('site',
-  'the origin actually being served. There is no default: a defaulted origin lets this gate pass '
-  + 'against a deployment nobody is looking at, which is the fail-open HM-6 already records for preflight.').replace(/\/$/, '');
-const rpc = arg('rpc', 'https://api.mainnet-beta.solana.com');
-const expectSigner = requiredStr('expect-signer',
-  'the wallet the site publishes as authoritative. A memo signed by anyone else attests nothing, and '
-  + 'checking the hash without checking who committed it would accept an impersonator\'s memo.');
-if (!isBase58Address(expectSigner)) {
-  refuse(`--expect-signer=${expectSigner} is not a base58 Solana address`,
-    'A malformed signer would make every comparison below vacuously false, which is a different'
-    + ' failure from "the memo was signed by someone else" and must not be reported as one.');
+/**
+ * Argument parsing is a function, not top-level statements, so that a refusal
+ * thrown here unwinds into the same handler as a refusal thrown mid-run. A bad
+ * --expect-signer and an unreachable RPC are both REFUSALS and both must leave
+ * exit code 2; if this ran at module scope the throw would escape as an
+ * uncaught exception and report 1 — the code that means "the checks ran and
+ * something FAILED", which is the one thing a refusal is not.
+ */
+let site, rpc, expectSigner;
+function parseArgs() {
+  site = requiredStr('site',
+    'the origin actually being served. There is no default: a defaulted origin lets this gate pass '
+    + 'against a deployment nobody is looking at, which is the fail-open HM-6 already records for preflight.').replace(/\/$/, '');
+  rpc = arg('rpc', 'https://api.mainnet-beta.solana.com');
+  expectSigner = requiredStr('expect-signer',
+    'the wallet the site publishes as authoritative. A memo signed by anyone else attests nothing, and '
+    + 'checking the hash without checking who committed it would accept an impersonator\'s memo.');
+  if (!isBase58Address(expectSigner)) {
+    refuse(`--expect-signer=${expectSigner} is not a base58 Solana address`,
+      'A malformed signer would make every comparison below vacuously false, which is a different'
+      + ' failure from "the memo was signed by someone else" and must not be reported as one.');
+  }
 }
 
 let fail = 0;
@@ -140,6 +160,7 @@ const check = (ok, label, detail) => {
 };
 const section = (t) => console.log(`\n--- ${t} ---`);
 
+async function main() {
 // ---------------------------------------------------------------------------
 section('the record being served');
 
@@ -173,7 +194,7 @@ const list = Array.isArray(memos) ? memos : (memos.memos ?? []);
 // @enforces A8 canonical-record-has-at-least-one-memo
 check(list.length > 0, 'the memo chain is not empty',
   list.length ? `${list.length} memo(s)` : 'no memo has ever been landed, so the record is not attested by anything');
-if (!list.length) { console.log('\nVERIFY-CANONICAL FAILED.'); process.exit(1); }
+if (!list.length) { console.log('\nVERIFY-CANONICAL FAILED.'); process.exitCode = 1; return; }
 
 const newest = list.reduce((a, b) => (b.n > a.n ? b : a));
 console.log(`        newest is memo #${newest.n}, ${newest.signature}`);
@@ -191,7 +212,7 @@ try {
 // @enforces A8 newest-memo-is-on-chain-and-succeeded
 check(tx !== null && tx.meta?.err === null, 'the newest memo is a landed, successful transaction',
   tx === null ? 'not found on this cluster' : `err=${JSON.stringify(tx.meta?.err)} slot=${tx.slot}`);
-if (!tx) { console.log('\nVERIFY-CANONICAL FAILED.'); process.exit(1); }
+if (!tx) { console.log('\nVERIFY-CANONICAL FAILED.'); process.exitCode = 1; return; }
 
 const msg = tx.transaction.message;
 const keys = (msg.staticAccountKeys ?? msg.accountKeys ?? []).map((k) => (k.toBase58 ? k.toBase58() : String(k)));
@@ -223,7 +244,7 @@ function bs58Decode(s) {
 // @enforces A8 newest-memo-carries-a-parseable-payload
 check(memoText !== null, 'the transaction invokes the memo program with a readable payload',
   memoText === null ? 'no memo instruction found' : `${Buffer.byteLength(memoText)} bytes`);
-if (memoText === null) { console.log('\nVERIFY-CANONICAL FAILED.'); process.exit(1); }
+if (memoText === null) { console.log('\nVERIFY-CANONICAL FAILED.'); process.exitCode = 1; return; }
 
 const field = (k) => (memoText.match(new RegExp(`^${k}=(.+)$`, 'm')) ?? [])[1] ?? null;
 const committedHash = field('sha256');
@@ -449,15 +470,44 @@ if (!firstTime) {
 }
 
 // ---------------------------------------------------------------------------
+/**
+ * `process.exitCode`, not `process.exit()`.
+ *
+ * FOUND 2026-08-09 by the hostile-origin harness, on the very first run, and it
+ * is a real defect in the PUBLISHED verifier rather than an artefact of the
+ * test. Calling `process.exit()` while undici still holds a keep-alive socket
+ * makes Node abort: on Windows the process terminates with 0xC0000409
+ * (3221226505) AFTER printing "VERIFY-CANONICAL CLEAR".
+ *
+ * So a clean verification could exit non-zero. ATTESTATION.md tells strangers
+ * this script "exits non-zero on any failure, so it is safe to put in a cron job
+ * or a CI step" — and on a successful run it could hand that cron job a crash
+ * code. An alarm that fires on success is an alarm people turn off.
+ *
+ * Setting the code and letting the loop drain gives the same exit status without
+ * the abort. This is the third place in the project to hit it; the other two
+ * were found the same way.
+ */
 console.log('');
 if (fail) {
   console.log(`VERIFY-CANONICAL FAILED — ${fail} check(s).`);
-  process.exit(1);
+  process.exitCode = 1;
+} else {
+  console.log('VERIFY-CANONICAL CLEAR.');
+  process.exitCode = 0;
+  if (!flag('quiet')) {
+    console.log('');
+    console.log('  This says the record being served is the record the chain attests, by the wallet the');
+    console.log('  site names, and that the pre-launch window has elapsed. It does NOT say the record is');
+    console.log('  true — only that it has not changed behind the attestation.');
+  }
 }
-console.log('VERIFY-CANONICAL CLEAR.');
-if (flag('quiet')) process.exit(0);
-console.log('');
-console.log('  This says the record being served is the record the chain attests, by the wallet the');
-console.log('  site names, and that the pre-launch window has elapsed. It does NOT say the record is');
-console.log('  true — only that it has not changed behind the attestation.');
-process.exit(0);
+}
+
+try {
+  parseArgs();
+  await main();
+} catch (e) {
+  if (e instanceof Refused) process.exitCode = 2;
+  else throw e;
+}
