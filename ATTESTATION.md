@@ -54,26 +54,28 @@ that is not listed here, treat it as hostile until we have explained it.
 |---|---|---|---|---|---|
 | 1 | `i8s8PjdhgmrN2jnPcc8hx6z37eNshkckQyK5pGpvfxYtLCBbUQM7KBEj8F1TjyJY5BHEuq2U6kyuYaRfMnZaT1W` | `06d2b97abfc5298b2d9e1e6b5932402b5da155f6b8856e7af09e6242bdaf10d5` | 6,210 | 438,247,595 | 2026-08-09 |
 | 2 | `EoizfE2h3t5egmd97CBsLfdWcpQkM5r3LvgKfmHNFgncPe6y7YVfpTd8sSSKgxJTpugvi7pvUhcAjzaG4wh5qvc` | `f3aea8abf3c2c421a0b34287ae5c2a62c612f84aaefb8a9f825fc7da9d068586` | 7,563 | 438,263,705 | 2026-08-09 |
+| 3 | `5CJznP7o3itepfjVfi3idyjV8cK1DSMU3MfK82M95AxKq1ZHDaGYG8XKJJyLsfb63k8Y9mejyNiHdvfTtAwhAcb3` | `494d4c5996104c7827e30911284c272b199668c247361e8e033e8a5618d21b8e` | 9,829 | 438,325,103 | 2026-08-10 |
 
-**Memo #2 is the newest one that has landed**, and its `prev` field names memo
-#1, so the chain is checkable link by link without trusting this table.
+**Memo #3 is the newest one that has landed**, and its `prev` field names memo
+#2, which names memo #1, so the chain is checkable link by link without trusting
+this table.
 
-**It does not currently commit the record being served.** Memo #3 is prepared and
-unsigned; the live record is 9,829 bytes hashing to
-`494d4c5996104c7827e30911284c272b199668c247361e8e033e8a5618d21b8e`, and until #3
-lands `verify-canonical.mjs` fails on this origin and reports `IN FLIGHT` — the
-served bytes match no memo, which is what an unattested update looks like rather
-than a rollback. Do not act on the record until it clears.
+**It commits the record being served**, as of 2026-08-10: 9,829 bytes hashing to
+`494d4c5996104c7827e30911284c272b199668c247361e8e033e8a5618d21b8e`.
+`verify-canonical.mjs` returns CLEAR, exit 0, on all fourteen checks.
 
-This sentence used to read "Memo #2 is the current one. It commits the record
-being served now." A blind security review found that flatly false while the
-in-flight hedge sat eight lines below it, where a reader doing the documented
-`curl … | sha256sum` check would meet the assertion first. The whole value of a
-second channel is disagreement detection, and it had gone stale in the same
-direction as the record it was supposed to check. `currency.test.mjs` now fails
-the build whenever this paragraph disagrees with what the origin actually
-serves — because the thing that went wrong was a human sentence about a
-machine-checkable fact.
+That sentence is load-bearing and it has been wrong before. It used to read "Memo
+#2 is the current one. It commits the record being served now" while the origin
+was serving bytes memo #2 did not commit — flatly false, with the in-flight hedge
+eight lines below it, where a reader doing the documented `curl … | sha256sum`
+check would meet the assertion first. The whole value of a second channel is
+disagreement detection, and it had drifted in the same direction as the record it
+was supposed to check.
+
+So it is no longer maintained by hand alone. `ops/src/security/currency.test.mjs`
+fetches the live record and fails the build if this section claims a currency the
+origin does not have, or fails to warn when the record is unattested. The thing
+that went wrong was a human sentence about a machine-checkable fact.
 
 Memo #1 states, in the transaction itself:
 
