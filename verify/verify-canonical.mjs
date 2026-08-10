@@ -117,6 +117,17 @@ const flag = (n) => process.argv.includes(`--${n}`);
  * report a crash rather than a refusal to anything scripting it.
  */
 class Refused extends Error {}
+/**
+ * A refusal must survive the catch blocks it is thrown through.
+ *
+ * Found live: --site pointed at an origin serving 404 printed the true reason
+ * ("returned 404"), then the surrounding try/catch — written for network errors
+ * — caught its own sentinel and refused a SECOND time with e.message, which is
+ * empty on a Refused. The operator's last line was "could not fetch <url> — ",
+ * a refusal with the reason erased by the code reporting it. Exit code stayed
+ * 2, so nothing failed open; the diagnosis was destroyed instead, which on a
+ * tool whose entire job is telling a stranger WHY is close to the same damage.
+ */
 const refuse = (...lines) => {
   for (const l of lines) console.log(`REFUSE  ${l}`);
   console.log('\nRefused. Nothing was checked; do not proceed.');
@@ -171,6 +182,7 @@ try {
   if (!r.ok) refuse(`${recUrl} returned ${r.status}`, 'The canonical record must be reachable to be verified.');
   recBytes = Buffer.from(await r.arrayBuffer());
 } catch (e) {
+  if (e instanceof Refused) throw e;
   refuse(`could not fetch ${recUrl} — ${e.message}`);
 }
 const liveHash = createHash('sha256').update(recBytes).digest('hex');
@@ -187,6 +199,7 @@ try {
   if (!r.ok) refuse(`${memoUrl} returned ${r.status}`);
   memos = await r.json();
 } catch (e) {
+  if (e instanceof Refused) throw e;
   refuse(`could not fetch ${memoUrl} — ${e.message}`);
 }
 const list = Array.isArray(memos) ? memos : (memos.memos ?? []);
@@ -206,6 +219,7 @@ let tx;
 try {
   tx = await rpcCall('getTransaction', [newest.signature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' }], rpc);
 } catch (e) {
+  if (e instanceof Refused) throw e;
   refuse(`getTransaction(${newest.signature}) failed — ${e.message}`);
 }
 
@@ -311,6 +325,7 @@ for (let page = 0; page < 20; page++) {
     got = await rpcCall('getSignaturesForAddress',
       [expectSigner, before ? { limit: 1000, before } : { limit: 1000 }], rpc);
   } catch (e) {
+    if (e instanceof Refused) throw e;
     refuse(`getSignaturesForAddress(${expectSigner}) failed — ${e.message}`,
       "Without the signer's history this script cannot tell a complete memo chain from a truncated one,",
       'and reporting CLEAR on an unchecked chain is the failure this section exists to prevent.');
@@ -331,6 +346,7 @@ for (const s of sigs) {
   try {
     t = await rpcCall('getTransaction', [s.signature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' }], rpc);
   } catch (e) {
+    if (e instanceof Refused) throw e;
     refuse(`getTransaction(${s.signature}) failed — ${e.message}`,
       'This transaction is in the signer\'s history and could not be read, so it cannot be ruled out as a memo.',
       'Skipping it would let an unreadable transaction hide a memo the site is not showing.');
