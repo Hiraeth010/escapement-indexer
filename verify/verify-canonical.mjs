@@ -260,23 +260,100 @@ section('does the chain know about memos the site is not showing');
 // transactions, decode every memo it has ever written, and fail if the chain
 // knows a memo the site is not showing. The site may not be the authority on
 // what the chain says.
+/**
+ * THIS HARVESTER MUST FAIL CLOSED, and its first version did not.
+ *
+ * It did `if (!t) continue` — a null getTransaction was FATAL for the
+ * site-nominated newest memo and SILENTLY SKIPPED for chain-discovered ones.
+ * That is backwards: the chain-discovered set is the entire trust anchor. Any
+ * memo the RPC declined to return simply vanished from `chainMemos`, `chainMax`
+ * dropped, `truncated` went false, and the script printed
+ * "PASS — the site is showing every memo the chain has" having failed to look.
+ *
+ * An attacker does not need to influence the RPC for this to bite; an ordinary
+ * 429 under load is enough, and the busiest moment is launch day.
+ *
+ * `rpcCall` was also unguarded here — a rate-limit threw an unhandled rejection
+ * and a Node stack trace, which verify-launch's own comment names as the thing
+ * an operator reads as broken tooling and routes around.
+ *
+ * And there was no pagination: `limit: 1000` is a page, not the history. A
+ * signer with more than a thousand transactions would silently lose its oldest
+ * memos — which is the direction that hides a rollback.
+ */
 const chainMemos = [];
-let sigPage = null;
-try {
-  sigPage = await rpcCall('getSignaturesForAddress', [expectSigner, { limit: 1000 }], rpc);
-} catch (e) {
-  refuse(`getSignaturesForAddress(${expectSigner}) failed — ${e.message}`,
-    'Without the signer\'s history this script cannot tell a complete memo chain from a truncated one,',
-    'and reporting CLEAR on an unchecked chain is the failure this section exists to prevent.');
+const sigs = [];
+let before;
+for (let page = 0; page < 20; page++) {
+  let got;
+  try {
+    got = await rpcCall('getSignaturesForAddress',
+      [expectSigner, before ? { limit: 1000, before } : { limit: 1000 }], rpc);
+  } catch (e) {
+    refuse(`getSignaturesForAddress(${expectSigner}) failed — ${e.message}`,
+      "Without the signer's history this script cannot tell a complete memo chain from a truncated one,",
+      'and reporting CLEAR on an unchecked chain is the failure this section exists to prevent.');
+  }
+  sigs.push(...got);
+  if (got.length < 1000) break;
+  before = got[got.length - 1].signature;
+  if (page === 19) {
+    refuse(`the signer has more than 20,000 transactions; this script stopped paginating.`,
+      'It will not report on a history it has not finished reading.');
+  }
 }
-console.log(`        ${sigPage.length} transaction(s) on the signer`);
+console.log(`        ${sigs.length} transaction(s) on the signer`);
 
-for (const s of sigPage) {
+for (const s of sigs) {
   if (s.err) continue;
-  const t = await rpcCall('getTransaction', [s.signature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' }], rpc);
-  if (!t) continue;
+  let t;
+  try {
+    t = await rpcCall('getTransaction', [s.signature, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' }], rpc);
+  } catch (e) {
+    refuse(`getTransaction(${s.signature}) failed — ${e.message}`,
+      'This transaction is in the signer\'s history and could not be read, so it cannot be ruled out as a memo.',
+      'Skipping it would let an unreadable transaction hide a memo the site is not showing.');
+  }
+  if (!t) {
+    refuse(`getTransaction(${s.signature}) returned null though it is in the signer's history.`,
+      'A transaction that cannot be fetched cannot be ruled out as a memo, and silently skipping it is exactly',
+      'how a truncation check comes to pass without having looked.');
+  }
   const m = t.transaction.message;
   const ks = (m.staticAccountKeys ?? m.accountKeys ?? []).map((k) => (k.toBase58 ? k.toBase58() : String(k)));
+
+  /**
+   * THE SIGNER CHECK. Without it this loop is a remote, permanent denial of
+   * service on our own launch, purchasable by any stranger for ~5,000 lamports.
+   *
+   * `getSignaturesForAddress` returns every transaction in which the address
+   * appears in ANY account-key position — not only the ones it signed. The
+   * wallet's own funding transaction is in this list and was paid for by
+   * somebody else.
+   *
+   * So an attacker sends one transaction containing a 1-lamport transfer to our
+   * wallet plus a memo reading "escapement canonical v1\nmemo=999". It shows up
+   * here. `chainMax` becomes 999, `siteMax` stays 2, `truncated` goes true, and
+   * every run — local AND the published copy ATTESTATION.md tells every stranger
+   * to run — reports "THE CHAIN HAS MEMO #999 AND THE SITE STOPS AT #2 … treat
+   * this origin as compromised". Abort A8 fails, A1 fires, and the launch is
+   * blocked. The chain is append-only, so they re-bump the number after every
+   * legitimate memo. There is no recovery path in the design.
+   *
+   * Worse than the denial of service: the project publishes "if they differ,
+   * trust the memo", so the attacker would hold a consensus-timestamped object
+   * that our own tooling treats as chain truth.
+   *
+   * This file states the correct principle at the top of the argument list — "a
+   * memo signed by anyone else attests nothing" — and did not apply it in the
+   * one loop described as the entire trust anchor. It survived the commit whose
+   * message was "four fail-opens, in the two files that decide whether the
+   * launch worked".
+   *
+   * ks[0] is the fee payer, which for a v0 message is the first required signer.
+   */
+  if (ks[0] !== expectSigner) continue;
+
   for (const ix of m.compiledInstructions ?? m.instructions ?? []) {
     if (ks[ix.programIdIndex] !== MEMO_PROGRAM) continue;
     const d = ix.data;
