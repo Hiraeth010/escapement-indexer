@@ -21,6 +21,7 @@ import { prettyCanonical } from './canonical.mjs';
 import { isPubkey } from './base58.mjs';
 import { environment } from './version.mjs';
 import { readVaultState, checkPot } from './pot.mjs';
+import { ledgerToCsv, estimateCost, costTable } from './snapshot.mjs';
 
 const USAGE = `escapement — deterministic token-slot entitlement indexer
 
@@ -29,7 +30,30 @@ const USAGE = `escapement — deterministic token-slot entitlement indexer
   escapement preflight --config <pubkey> --vault <pubkey> --total <lamports> [--rpc <url>]
   escapement exclusions-diff <before.json> <after.json>
   escapement exclusions-template [--mint <pubkey>] [--from <slot>]
+  escapement cost [--from <slot> --to <slot>]
   escapement env
+
+BEFORE YOU START A RUN
+  escapement cost --from <slot> --to <slot>
+
+  Block data is ~11.6 MB PER SLOT and is paid on every slot in the range, so a
+  day of chain is about 2.4 TB and roughly 30 hours of fetching on a public
+  endpoint. Short ranges are genuinely cheap; a day is not, in any configuration.
+  This is printed rather than discovered, because the only other way to find that
+  wall is to run into it.
+
+TO GET A HOLDER WEIGHTING OUT (rather than a merkle root)
+  --csv <file>          writes the token-slot ledger as
+                          owner,token_slots,share_of_total
+                        ordered by holding, largest first. That is the input an
+                        airdrop weighting wants, and using it does not require
+                        adopting this project's distribution mechanism, its
+                        merkle leaf format, or its config PDA.
+
+                        The rows reflect the exclusions YOU supplied. If your
+                        policy excludes nothing, the AMM pool is very likely the
+                        first line — on one real distribution it was 85% of the
+                        total, held at an address no keypair can sign for.
 
 RANGE
   --from / --to define the half-open slot range [from, to). Both bounds must be
@@ -211,6 +235,36 @@ async function cmdIndex(args) {
 
   const out = resolve(args.out ?? `artifacts/${mint}.${from}-${to}.json`);
   const written = writeArtifact(out, artifact, inputSet);
+
+  /**
+   * `--csv` — the token-slot ledger as something a stranger can use.
+   *
+   * A reviewer could name a concrete user for the census in this project and
+   * could not name one for the indexer. The reason was not the measurement, it
+   * was the packaging: the only output was a JSON artifact carrying an
+   * Escapement-domain merkle root that no deployed program reads. The genuinely
+   * reusable part — who held how much, for how long — was in there and had no
+   * way out.
+   *
+   * `owner,token_slots,share_of_total`, ordered by holding. That is the input an
+   * airdrop weighting wants, and it does not require adopting any of this
+   * project's distribution mechanism to use.
+   */
+  if (args.csv) {
+    const csvPath = resolve(args.csv);
+    const rows = artifact.ledger ?? artifact.entitlements ?? null;
+    if (!rows) {
+      process.stderr.write('\n  --csv: this artifact carries no ledger rows to write.\n');
+    } else {
+      writeFileSync(csvPath, ledgerToCsv(rows));
+      if (!args.quiet) {
+        process.stderr.write(`\n  csv       ${csvPath}  (${rows.length} owners, ordered by holding)\n`);
+        process.stderr.write('            NOTE: these are RAW time-weighted holdings after the exclusions you\n');
+        process.stderr.write('            supplied. If your policy excluded nothing, the AMM pool is very likely\n');
+        process.stderr.write('            the first line — on one real distribution it was 85% of the total.\n');
+      }
+    }
+  }
 
   if (!args.quiet) {
     const a = artifact;
@@ -422,6 +476,30 @@ export async function main(argv) {
     case 'verify': return await cmdVerify(args);
     case 'preflight': return await cmdPreflight(args);
     case 'exclusions-diff': return cmdExclusionsDiff(args);
+    /**
+     * `cost` — what a range will actually take, before anybody starts one.
+     *
+     * The block data is ~11.6 MB per slot and it is paid on EVERY slot in the
+     * range, so a day of chain is about 2.4 TB. That was measurable from the
+     * repository's own numbers and was published nowhere, which meant the only
+     * way to find the wall was to run into it — usually after hours of fetching.
+     */
+    case 'cost': {
+      const f = args.from !== undefined ? Number(args.from) : null;
+      const t = args.to !== undefined ? Number(args.to) : null;
+      if (f !== null && t !== null) {
+        const e = estimateCost(f, t);
+        process.stdout.write(
+          `range [${f}, ${t}) — ${e.slots} slots\n\n`
+          + `  chain covered   ${e.days >= 1 ? `${e.days.toFixed(2)} days` : `${(e.days * 24).toFixed(1)} hours`}\n`
+          + `  block data      ${e.gigabytes >= 1 ? `${e.gigabytes.toFixed(1)} GB` : `${e.megabytes.toFixed(0)} MB`}\n`
+          + `  fetch at 2/s    ${e.fetchHours >= 1 ? `${e.fetchHours.toFixed(1)} hours` : `${(e.fetchHours * 60).toFixed(0)} minutes`}\n`
+          + `  free public RPC ${e.feasibleOnFreeRpc ? 'plausible' : 'NO — this needs a paid archival endpoint'}\n\n`,
+        );
+      }
+      process.stdout.write(`${costTable()}\n`);
+      return 0;
+    }
     case 'exclusions-template':
       process.stdout.write(exclusionsTemplate(args.mint ?? '<mint pubkey>', args.from ? Number(args.from) : 0));
       return 0;
