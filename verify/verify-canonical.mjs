@@ -381,7 +381,10 @@ for (const s of sigs) {
     const text = Buffer.from(typeof d === 'string' ? bs58Decode(d) : d).toString('utf8');
     if (!text.startsWith('escapement canonical v1')) continue;
     const n = Number((text.match(/^memo=(\d+)$/m) ?? [])[1]);
-    if (Number.isInteger(n)) chainMemos.push({ n, signature: s.signature });
+    // The committed hash is kept, not just the number, so a mismatch below can
+    // say WHICH of the two mismatches it is. See the rollback discriminator.
+    const sha = (text.match(/^sha256=([0-9a-f]{64})$/m) ?? [])[1] ?? null;
+    if (Number.isInteger(n)) chainMemos.push({ n, signature: s.signature, sha256: sha });
   }
 }
 
@@ -422,6 +425,36 @@ check(committedHash === liveHash, 'the served record hashes to what the newest m
     : `served ${liveHash} but memo #${newest.n} committed ${committedHash} — the record changed and the memo did not follow. `
       + 'Land memo #' + (newest.n + 1) + ' for the new bytes BEFORE this deployment goes to users, or every user running '
       + 'our own published check is told this site is compromised.');
+
+/**
+ * WHICH mismatch is it?
+ *
+ * /canonical tells readers a mismatch is one of exactly two things and that they
+ * can tell them apart, so this has to actually do that rather than print one
+ * undifferentiated FAIL for both. The discriminator is DIRECTION:
+ *
+ *   - Served bytes match NO memo → an update is in flight. Transient, expected
+ *     at launch, resolves when the next memo lands. Bad to ship, not an attack.
+ *   - Served bytes match an OLDER memo while a newer one exists → a ROLLBACK.
+ *     Someone is serving bytes that were genuine once. There is no benign
+ *     reason for this to happen, and every hash a naive checker looks at will
+ *     match, which is the whole reason the chain is numbered and linked.
+ *
+ * Printed only on mismatch: on the happy path it would be noise, and a check
+ * that prints a scary word when nothing is wrong is a check people stop reading.
+ */
+if (committedHash !== liveHash) {
+  const older = chainMemos.filter((m) => m.sha256 === liveHash && m.n < newest.n);
+  if (older.length) {
+    console.log(`ROLLBACK  the served bytes match memo #${older.map((m) => m.n).join(', #')}, `
+      + `which is older than #${newest.n}. This origin is serving a record that was superseded on chain. `
+      + 'There is no legitimate reason for this. Trust the memo, not the page.');
+  } else {
+    console.log('IN FLIGHT  the served bytes match no memo at all, which is what an unattested update looks like '
+      + 'rather than a rollback. Expected briefly after a record changes; if it persists, treat it as unattested '
+      + 'and do not act on the record.');
+  }
+}
 
 // @enforces A8 newest-memo-commits-the-origin-being-served
 check(committedUrl === recUrl, 'the memo commits the URL actually serving the record',
