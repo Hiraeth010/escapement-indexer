@@ -75,8 +75,35 @@ const isBase58Address = (s) => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s);
 
 const MEMO_PROGRAM = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
 
-/** RUNBOOK §6.5. The record must be public and attested for this long before launch. */
-const PRE_LAUNCH_DAYS = 14;
+/**
+ * How long the record must be attested before launch.
+ *
+ * CHANGED 2026-08-09 from 14 days to 0, by founder decision, and the reasoning
+ * is recorded because the number was never the point.
+ *
+ * What the window was FOR: making an impersonator self-refuting. Any address
+ * claiming to be $ESCAPEMENT before the mint exists is contradicted by a
+ * consensus-timestamped record saying "not yet minted".
+ *
+ * That property comes from the memo EXISTING BEFORE THE MINT, not from any
+ * particular amount of elapsed time. Memo #1 landed at slot 438,247,595. Every
+ * impersonator from that moment on is already refuted. Fourteen days added no
+ * cryptographic strength whatsoever.
+ *
+ * What it did add was time for the record to be FOUND — indexed, archived,
+ * seen by someone before the token existed. That is worth something to a
+ * project with an audience. This project has no X account, no community and no
+ * traffic, so fourteen days of a record nobody reads buys close to nothing, and
+ * the honest thing is to say so rather than keep a number because it sounds
+ * prudent.
+ *
+ * WHAT IS STILL ENFORCED, and it is the part that matters: memo #1 must have
+ * landed, the served record must hash to what the newest memo committed, the
+ * chain must show no memo the site is hiding, and the signer must be the wallet
+ * the site publishes. A launch still cannot happen against an unattested or
+ * drifted record. Only the waiting is gone.
+ */
+const PRE_LAUNCH_DAYS = Number(process.env.ESCAPEMENT_PRE_LAUNCH_DAYS ?? 0);
 
 const arg = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i === -1 ? d : process.argv[i + 1]; };
 const flag = (n) => process.argv.includes(`--${n}`);
